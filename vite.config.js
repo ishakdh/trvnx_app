@@ -6,10 +6,10 @@ export default defineConfig({
   // Add this server block:
   server: {
     host: true, // 🚀 This is the magic line that exposes it to Coolify
-    port: 5173,
+    port: 3000,
   },
   preview: {
     host: true,
-    port: 5173,
+    port: 3000,
   }
 })
