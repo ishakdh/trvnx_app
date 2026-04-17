@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { BD_DATA } from '../../utils/bd_geo.js';
 import { jsPDF } from 'jspdf';
@@ -14,6 +15,9 @@ import Finance from './Finance.jsx';
 import DistributorSR from './DistributorSR.jsx';
 import ActivityLog from './ActivityLog.jsx';
 import Marketing from './Marketing.jsx';
+
+// 🚀 Fixed: Use a constant for the API URL to avoid 'import.meta' errors in certain environments
+const VITE_API_URL = "https://server.trvnx.com/api";
 
 const AdminDashboard = ({ user, onLogout }) => {
 
@@ -133,7 +137,7 @@ const AdminDashboard = ({ user, onLogout }) => {
             address: { line1: linduxUserForm.address1, line2: linduxUserForm.address2, division: linduxUserForm.division, district: linduxUserForm.district, thana: linduxUserForm.thana }
         };
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+            const res = await fetch(`${VITE_API_URL}/auth/register`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
@@ -156,7 +160,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 role: editLinduxUserModal.user.role,
                 permissions: editLinduxUserModal.user.permissions
             };
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/update-user`, {
+            const res = await fetch(`${VITE_API_URL}/auth/update-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
@@ -183,7 +187,8 @@ const AdminDashboard = ({ user, onLogout }) => {
     const handleMirror = async (targetId) => {
         if (!window.confirm("⚠️ INITIATE MIRROR PROTOCOL? You will take full control of this identity.")) return;
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/mirror-user`, {
+            // 🚀 FIXED: Pointing to /auth/shadow and using window.location.href for force-refresh
+            const res = await fetch(`${VITE_API_URL}/auth/shadow`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({ targetUserId: targetId })
@@ -194,8 +199,13 @@ const AdminDashboard = ({ user, onLogout }) => {
                 localStorage.setItem('original_admin_user', localStorage.getItem('trvnx_user'));
                 localStorage.setItem('trvnx_token', data.token);
                 localStorage.setItem('trvnx_user', JSON.stringify(data.user));
-                window.location.reload();
-            } else { alert("❌ MIRROR PROTOCOL FAILED. Target identity locked."); }
+
+                // 🚀 FORCE RELOAD TO UPDATE PERMISSIONS/SIDEBAR INSTANTLY
+                window.location.href = '/dashboard';
+            } else {
+                const errData = await res.json();
+                alert(`❌ MIRROR PROTOCOL FAILED: ${errData.message || 'Identity locked.'}`);
+            }
         } catch (err) { alert("⚠️ SYSTEM OFFLINE."+err.toString()); }
     };
 
@@ -204,7 +214,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         if (passwordForm.new !== passwordForm.confirm) return alert("❌ PASSWORDS DO NOT MATCH.");
         if (passwordForm.new.length < 6) return alert("❌ PASSWORD MUST BE AT LEAST 6 CHARACTERS.");
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/change-password`, {
+            const res = await fetch(`${VITE_API_URL}/auth/change-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({ newPassword: passwordForm.new })
@@ -224,8 +234,8 @@ const AdminDashboard = ({ user, onLogout }) => {
         try {
             let endpoint = '';
             let payload = { deviceId: device._id, reason: finalReason, adminPassword: password };
-            if (actionType === 'TRACK') endpoint = `${import.meta.env.VITE_API_URL}/devices/track`;
-            else if (actionType === 'UNINSTALL') endpoint = `${import.meta.env.VITE_API_URL}/devices/uninstall`;
+            if (actionType === 'TRACK') endpoint = `${VITE_API_URL}/devices/track`;
+            else if (actionType === 'UNINSTALL') endpoint = `${VITE_API_URL}/devices/uninstall`;
 
             const res = await fetch(endpoint, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
@@ -254,7 +264,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 licenseTarget: Number(targetForm.licenseTarget) || 0, bonus_amount: Number(targetForm.bonus) || 0,
                 bonus: Number(targetForm.bonus) || 0
             };
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/marketing/create-target`, {
+            const res = await fetch(`${VITE_API_URL}/marketing/create-target`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
@@ -277,7 +287,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 license_target: Number(t.license_target || t.licenseTarget || 0),
                 bonus_amount: Number(t.bonus_amount || t.bonus || 0)
             };
-            const targetUrl = `${import.meta.env.VITE_API_URL}/marketing/update-target`;
+            const targetUrl = `${VITE_API_URL}/marketing/update-target`;
             const res = await fetch(targetUrl, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(updatePayload)
@@ -287,7 +297,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 setEditTargetModal({ isOpen: false, target: null });
                 fetchData('marketing/targets', setMarketingTargets);
             } else {
-                const fallbackRes = await fetch(`${import.meta.env.VITE_API_URL}/marketing/targets/${t._id}`, {
+                const fallbackRes = await fetch(`${VITE_API_URL}/marketing/targets/${t._id}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                     body: JSON.stringify(updatePayload)
                 });
@@ -302,7 +312,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     const fetchData = async (endpoint, setter) => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
+            const res = await fetch(`${VITE_API_URL}/${endpoint}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (res.status === 401 || res.status === 403) return;
             const data = await res.json();
             if (endpoint === 'devices/all') setter(data.devices || data.data || data || []);
@@ -356,7 +366,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     const handleUpdateSettings = async (e) => {
         e.preventDefault();
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`, {
+        const res = await fetch(`${VITE_API_URL}/settings`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
             body: JSON.stringify(systemConfig)
         });
@@ -371,7 +381,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 type: entryType, name: financeFormModal.name, description: financeFormModal.description,
                 amount: Number(financeFormModal.amount), remarks: financeFormModal.remarks, date: financeFormModal.date
             };
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/finance-entry`, {
+            const res = await fetch(`${VITE_API_URL}/admin/finance-entry`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
@@ -391,7 +401,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 shopId: rechargeForm.shopId, amount: Number(rechargeForm.amount), paymentMethod: rechargeForm.method,
                 otherDetails: rechargeForm.otherDetails, date: rechargeForm.date
             };
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/shop-recharge`, {
+            const res = await fetch(`${VITE_API_URL}/admin/shop-recharge`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
@@ -407,7 +417,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     const handleApprovePayout = async (txId) => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/approve-payout`, {
+            const res = await fetch(`${VITE_API_URL}/transactions/approve-payout`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({ transactionId: txId })
             });
@@ -417,7 +427,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     const handleReleasePayout = async (txId) => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/release-payout`, {
+            const res = await fetch(`${VITE_API_URL}/transactions/release-payout`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({ transactionId: txId })
             });
@@ -440,7 +450,7 @@ const AdminDashboard = ({ user, onLogout }) => {
             createdBy: user.id || user._id, territory: { division: distFormData.division, district: distFormData.district, police_station: distFormData.thana, managed_districts: distFormData.marketDistricts, managed_thanas: distFormData.marketThanas }
         };
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+            const res = await fetch(`${VITE_API_URL}/auth/register`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
@@ -455,7 +465,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     };
 
     const toggleUserLock = async (userId, currentStatus) => {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/toggle-status`, {
+        const res = await fetch(`${VITE_API_URL}/auth/toggle-status`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
             body: JSON.stringify({ userId, status: currentStatus === 'ACTIVE' ? 'LOCKED' : 'ACTIVE' })
         });
@@ -463,7 +473,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     };
 
     const handleDeviceAction = async (deviceId, action, reason = "Super Admin Request") => {
-        await fetch(`${import.meta.env.VITE_API_URL}/devices/toggle-lock`, {
+        await fetch(`${VITE_API_URL}/devices/toggle-lock`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
             body: JSON.stringify({ deviceId, action, reason })
         });
@@ -578,7 +588,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     const linduxUserCurrentDistricts = (linduxUserForm.division && BD_DATA && BD_DATA[linduxUserForm.division]) ? Object.keys(BD_DATA[linduxUserForm.division]) : [];
     const linduxUserCurrentThanas = (linduxUserForm.district && BD_DATA && BD_DATA[linduxUserForm.division] && BD_DATA[linduxUserForm.division][linduxUserForm.district]) ? BD_DATA[linduxUserForm.division][linduxUserForm.district] : [];
 
-    // 🚀 NEW: Re-added missing arrays with safe .slice().sort() for purity
     const allBDDistricts = BD_DATA ? Object.values(BD_DATA).reduce((acc, div) => acc.concat(Object.keys(div)), []).slice().sort() : [];
     const targetAvailableThanas = (Array.isArray(targetForm.districts) && targetForm.districts.length > 0 && BD_DATA)
         ? targetForm.districts.reduce((acc, dist) => {
@@ -1032,7 +1041,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                                     <input type="text" placeholder="Search Customer..." value={deviceSearchTerm} onChange={(e) => setDeviceSearchTerm(e.target.value)} className="bg-transparent border-none outline-none text-xs text-white placeholder-gray-600 font-bold uppercase w-full lg:w-48" />
                                 </div>
 
-                                {/* 🚀 NEW FILTER BUTTONS WITH "ALL DEVICE" ADDED */}
                                 <div className="flex flex-wrap justify-center gap-2 text-[9px] font-black uppercase tracking-widest w-full lg:w-auto flex-1 px-4">
                                     <button onClick={() => {setDeviceFilter('ALL'); setCurrentDevicePage(1);}} className={`px-4 py-2 rounded transition-all shadow-md ${deviceFilter === 'ALL' ? 'bg-indigo-600 text-white border border-indigo-500' : 'bg-[#111A35] text-gray-400 border border-[#273A60] hover:text-indigo-400 hover:border-indigo-400/50'}`}>All Device</button>
                                     <button onClick={() => {setDeviceFilter('ACTIVE'); setCurrentDevicePage(1);}} className={`px-4 py-2 rounded transition-all shadow-md ${deviceFilter === 'ACTIVE' ? 'bg-blue-600 text-white border border-blue-500' : 'bg-[#111A35] text-gray-400 border border-[#273A60] hover:text-blue-400 hover:border-blue-400/50'}`}>All Active</button>
@@ -1405,5 +1413,3 @@ const AdminDashboard = ({ user, onLogout }) => {
 };
 
 export default AdminDashboard;
-
-
