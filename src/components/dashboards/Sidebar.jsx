@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 
 const Sidebar = ({
                      pendingShopCount,
@@ -9,12 +9,14 @@ const Sidebar = ({
                      isMarketingMenuOpen, setIsMarketingMenuOpen,
                      isLicenseMenuOpen, setIsLicenseMenuOpen,
                      onPasswordClick,
-                     isLinduxUserMenuOpen, setIsLinduxUserMenuOpen, // 🚀 NEW: State for Lindux User Menu
-                     onQrSetupClick // 🚀 ADDED: Prop to trigger the QR Modal in AdminDashboard
+                     isLinduxUserMenuOpen, setIsLinduxUserMenuOpen,
+                     onQrSetupClick
                  }) => {
-    const canSeeFinance = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTS'].includes(user.role);
-    const canSeeRegistry = ['SUPER_ADMIN', 'ADMIN', 'MARKETING', 'CALL_CENTER'].includes(user.role);
-    const canSeeSettings = ['SUPER_ADMIN', 'ADMIN'].includes(user.role);
+    // 🚀 HELPER: Checks if user is Super Admin OR has the specific permission string
+    const hasPerm = (p) => user.role === 'SUPER_ADMIN' || (user.permissions && user.permissions.includes(p));
+
+    // 🚀 LOGIC: Visibility summary for the Finance grouping
+    const canSeeFinance = hasPerm('FINANCE_INCOME') || hasPerm('FINANCE_EXPENSE') || hasPerm('BALANCE_SHEET') || hasPerm('CASH_BOOK') || hasPerm('UNUSED_BALANCE') || hasPerm('RECHARGE') || hasPerm('DISTRIBUTOR_PAYOUTS');
 
     const navClass = (id) => `flex items-center gap-4 px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === id ? 'bg-[#0F172A] text-white border-l-4 border-white' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`;
 
@@ -28,7 +30,7 @@ const Sidebar = ({
                 {isSidebarOpen ? (
                     <div>
                         <h2 className="text-lg font-black tracking-tighter text-blue-500 italic">Lindux EMI</h2>
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">SUPER_ADMIN</p>
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest mt-1">{user.role}</p>
                     </div>
                 ) : (
                     <div className="text-xl font-black text-blue-500 mx-auto italic">T</div>
@@ -54,26 +56,26 @@ const Sidebar = ({
                         </button>
                         {isFinanceMenuOpen && isSidebarOpen && (
                             <div className="ml-4 pl-4 border-l border-orange-900/40 flex flex-col gap-1 mt-1">
-                                <button onClick={() => setActiveTab('finance_entry_income')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_income' ? 'text-green-400 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}>ENTRY INCOME</button>
-                                <button onClick={() => setActiveTab('finance_entry_expense')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_expense' ? 'text-red-400 bg-red-500/10' : 'text-gray-600 hover:text-red-400 transition-colors'} mt-2`}>ENTRY EXPENSE</button>
-                                <button onClick={() => setActiveTab('finance_balance')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_balance' ? 'text-orange-300 bg-orange-500/10' : 'text-gray-600 hover:text-orange-400 transition-colors'} mt-2`}>BALANCE SHEET</button>
-                                <button onClick={() => setActiveTab('finance_cashbook')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_cashbook' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'} mt-2`}>CASH BOOK</button>
-                                <button onClick={() => setActiveTab('finance_unused')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_unused' ? 'text-blue-300 bg-blue-500/10' : 'text-gray-600 hover:text-blue-400 transition-colors'} mt-2`}>UNUSED BALANCE</button>
-                                <button onClick={() => setActiveTab('finance_recharge')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_recharge' ? 'text-teal-300 bg-teal-500/10' : 'text-gray-600 hover:text-teal-400 transition-colors'} mt-2`}>RECHARGE TO SHOP</button>
-                                <button onClick={() => setActiveTab('finance_payouts')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_payouts' ? 'text-purple-300 bg-purple-500/10' : 'text-gray-600 hover:text-purple-400 transition-colors'} mt-2`}>DISTRIBUTOR PAYOUTS</button>
+                                {hasPerm('FINANCE_INCOME') && <button onClick={() => setActiveTab('finance_entry_income')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_income' ? 'text-green-400 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}>ENTRY INCOME</button>}
+                                {hasPerm('FINANCE_EXPENSE') && <button onClick={() => setActiveTab('finance_entry_expense')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_expense' ? 'text-red-400 bg-red-500/10' : 'text-gray-600 hover:text-red-400 transition-colors'} mt-2`}>ENTRY EXPENSE</button>}
+                                {hasPerm('BALANCE_SHEET') && <button onClick={() => setActiveTab('finance_balance')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_balance' ? 'text-orange-300 bg-orange-500/10' : 'text-gray-600 hover:text-orange-400 transition-colors'} mt-2`}>BALANCE SHEET</button>}
+                                {hasPerm('CASH_BOOK') && <button onClick={() => setActiveTab('finance_cashbook')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_cashbook' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'} mt-2`}>CASH BOOK</button>}
+                                {hasPerm('UNUSED_BALANCE') && <button onClick={() => setActiveTab('finance_unused')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_unused' ? 'text-blue-300 bg-blue-500/10' : 'text-gray-600 hover:text-blue-400 transition-colors'} mt-2`}>UNUSED BALANCE</button>}
+                                {hasPerm('RECHARGE') && <button onClick={() => setActiveTab('finance_recharge')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_recharge' ? 'text-teal-300 bg-teal-500/10' : 'text-gray-600 hover:text-teal-400 transition-colors'} mt-2`}>RECHARGE TO SHOP</button>}
+                                {hasPerm('DISTRIBUTOR_PAYOUTS') && <button onClick={() => setActiveTab('finance_payouts')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_payouts' ? 'text-purple-300 bg-purple-500/10' : 'text-gray-600 hover:text-purple-400 transition-colors'} mt-2`}>DISTRIBUTOR PAYOUTS</button>}
                             </div>
                         )}
                     </div>
                 )}
 
-                {canSeeRegistry && (
+                {hasPerm('ALL_DEVICES') && (
                     <button onClick={() => setActiveTab('all_devices')} className={navClass('all_devices')}>
                         <span className="text-sm">📱</span>
                         {isSidebarOpen && <span>ALL_DEVICES</span>}
                     </button>
                 )}
 
-                {canSeeRegistry && (
+                {(hasPerm('DISTRIBUTOR_SR') || hasPerm('DIST_CREATE') || hasPerm('DIST_DETAILS')) && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsDistMenuOpen(!isDistMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('dist_') || activeTab.startsWith('sr_') ? 'text-indigo-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -94,7 +96,7 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeRegistry && (
+                {hasPerm('MARKETING') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsMarketingMenuOpen(!isMarketingMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('marketing_') ? 'text-pink-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -112,7 +114,7 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeRegistry && (
+                {hasPerm('SHOP') && (
                     <button onClick={() => setActiveTab('shop_list')} className={`flex justify-between items-center w-full px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === 'shop_list' ? 'bg-[#0F172A] text-blue-400 border-l-4 border-blue-500' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`}>
                         <div className="flex items-center gap-4">
                             <span className="text-sm">🛒</span>
@@ -126,8 +128,7 @@ const Sidebar = ({
                     </button>
                 )}
 
-                {/* 🚀 NEW: Lindux User Menu */}
-                {canSeeSettings && (
+                {hasPerm('LINDUX_USER') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsLinduxUserMenuOpen(!isLinduxUserMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('lindux_user') ? 'text-cyan-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -145,7 +146,7 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeSettings && (
+                {hasPerm('LICENSE_FEE') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsLicenseMenuOpen(!isLicenseMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('license_') ? 'text-blue-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -165,27 +166,29 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeSettings && (
-                    <>
-                        <button onClick={() => setActiveTab('gateways')} className={navClass('gateways')}>
-                            <span className="text-sm">💳</span>
-                            {isSidebarOpen && <span>PAYMENT_GATEWAY</span>}
-                        </button>
-
-                        {/* 🚀 FIXED: QR Code Button triggers modal via props */}
-                        <button onClick={onQrSetupClick} className={navClass('qr_settings')}>
-                            <span className="text-sm">🔲</span>
-                            {isSidebarOpen && <span>QR CODE</span>}
-                        </button>
-                    </>
+                {hasPerm('PAYMENT_GATEWAY') && (
+                    <button onClick={() => setActiveTab('gateways')} className={navClass('gateways')}>
+                        <span className="text-sm">💳</span>
+                        {isSidebarOpen && <span>PAYMENT_GATEWAY</span>}
+                    </button>
                 )}
-                <button
-                    onClick={() => setActiveTab('activity_logs')}
-                    className={`w-full text-left px-4 py-3 rounded text-[10px] font-black transition-all border-l-4 
-        ${activeTab === 'activity_logs' ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg' : 'border-transparent text-gray-500 hover:bg-[#111A35] hover:text-gray-300'}`}
-                >
-                    📜 ACTIVITY LOGS
-                </button>
+
+                {hasPerm('QR_CODE') && (
+                    <button onClick={onQrSetupClick} className={navClass('qr_settings')}>
+                        <span className="text-sm">🔲</span>
+                        {isSidebarOpen && <span>QR CODE</span>}
+                    </button>
+                )}
+
+                {hasPerm('ACTIVITY_LOGS') && (
+                    <button
+                        onClick={() => setActiveTab('activity_logs')}
+                        className={`w-full text-left px-4 py-3 rounded text-[10px] font-black transition-all border-l-4 
+            ${activeTab === 'activity_logs' ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg' : 'border-transparent text-gray-500 hover:bg-[#111A35] hover:text-gray-300'}`}
+                    >
+                        📜 ACTIVITY LOGS
+                    </button>
+                )}
 
                 <div className="mt-auto pt-8 pb-4 flex flex-col gap-2">
                     <button onClick={onPasswordClick} className="w-full text-gray-500 hover:text-white px-4 py-3 rounded text-[10px] font-bold text-left hover:bg-gray-800 transition-all uppercase tracking-widest flex items-center gap-4">
