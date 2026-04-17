@@ -6,7 +6,6 @@ import MultiSelectDropdown from "./admin/MultiSelectDropdown.jsx";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import HomeDashboard from './HomeDashboard.jsx';
 import LicenseFee from './LicenseFee.jsx';
-
 import Sidebar from './Sidebar.jsx';
 import ShopList from './ShopList.jsx';
 import RechargeTerminal from './RechargeTerminal.jsx';
@@ -14,32 +13,108 @@ import CreateOperator from './CreateOperator.jsx';
 import Finance from './Finance.jsx';
 import DistributorSR from './DistributorSR.jsx';
 import ActivityLog from './ActivityLog.jsx';
-
-// 🚀 IMPORT THE NEW MARKETING COMPONENT
 import Marketing from './Marketing.jsx';
 
 const AdminDashboard = ({ user, onLogout }) => {
-    // State Matrix
+
+    // --- 1. STATE INITIALIZATION ---
     const [users, setUsers] = useState([]);
-    // const [pendingTx, setPendingTx] = useState([]);
-    // const [activeSlip, setActiveSlip] = useState(null);
-    // const [feeOverride, setFeeOverride] = useState({});
-    // const [showRechargeModal, setShowRechargeModal] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
-    // 🚀 NEW: View and Edit Modal States
+
     const [viewLinduxUserModal, setViewLinduxUserModal] = useState({ isOpen: false, user: null });
     const [editLinduxUserModal, setEditLinduxUserModal] = useState({ isOpen: false, user: null });
-
-    // 🚀 NEW: Lindux User Menu States & Data
     const [isLinduxUserMenuOpen, setIsLinduxUserMenuOpen] = useState(false);
+
     const [linduxUserForm, setLinduxUserForm] = useState({
         name: '', password: '', fatherName: '', motherName: '',
         phone1: '', phone2: '', address1: '', address2: '',
         division: '', district: '', thana: '', role: 'ADMIN', permissions: []
     });
 
-    // 🚀 ALL SYSTEM MODULES FOR PERMISSION CHECKLIST
     const ALL_PERMISSIONS = ['HOME', 'FINANCE_INCOME', 'FINANCE_EXPENSE', 'BALANCE_SHEET', 'CASH_BOOK', 'UNUSED_BALANCE', 'RECHARGE', 'DISTRIBUTOR_PAYOUTS', 'ALL_DEVICES', 'DISTRIBUTOR_SR', 'MARKETING', 'SHOP', 'LICENSE_FEE', 'PAYMENT_GATEWAY', 'QR_CODE', 'ACTIVITY_LOGS', 'LINDUX_USER'];
+
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
+    const [showQrModal, setShowQrModal] = useState(false);
+    const [secureActionModal, setSecureActionModal] = useState({ isOpen: false, device: null, actionType: '', step: 1, reason: 'Due to Customer Request', customReason: '', password: '' });
+
+    const [allDevices, setAllDevices] = useState([]);
+    const [deviceSearchTerm, setDeviceSearchTerm] = useState('');
+    const [deviceFilter, setDeviceFilter] = useState('ACTIVE');
+    const [currentDevicePage, setCurrentDevicePage] = useState(1);
+    const DEVICES_PER_PAGE = 50;
+
+    const [shopSearchTerm, setShopSearchTerm] = useState('');
+    const [currentShopPage, setCurrentShopPage] = useState(1);
+    const [viewShopModal, setViewShopModal] = useState({ isOpen: false, shop: null });
+    const SHOPS_PER_PAGE = 50;
+
+    const [commissionList, setCommissionList] = useState([]);
+    const [commStartDate, setCommStartDate] = useState('');
+    const [commEndDate, setCommEndDate] = useState('');
+    const [viewCommModal, setViewCommModal] = useState({ isOpen: false, dist: null, details: [] });
+
+    const [financeLedger, setFinanceLedger] = useState([]);
+    const [financeStartDate, setFinanceStartDate] = useState('');
+    const [financeEndDate, setFinanceEndDate] = useState('');
+    const [financeSearchTerm, setFinanceSearchTerm] = useState('');
+    const [financeFormModal, setFinanceFormModal] = useState({
+        isOpen: false, type: 'INCOME', date: new Date().toISOString().split('T')[0],
+        name: '', description: '', amount: '', remarks: ''
+    });
+
+    const [unusedBalanceList, setUnusedBalanceList] = useState([]);
+    const [unusedStartDate, setUnusedStartDate] = useState('');
+    const [unusedEndDate, setUnusedEndDate] = useState('');
+    const [viewUnusedModal, setViewUnusedModal] = useState({ isOpen: false, shop: null, history: [] });
+
+    const [rechargeForm, setRechargeForm] = useState({
+        date: new Date().toISOString().split('T')[0], shopId: '', shopName: '', shopOwner: '', phone: '',
+        amount: '', method: 'Cash', otherDetails: ''
+    });
+    const [rechargeSearchQuery, setRechargeSearchQuery] = useState('');
+    const [isRechargeSearchOpen, setIsRechargeSearchOpen] = useState(false);
+
+    const [systemConfig, setSystemConfig] = useState({
+        base_license_price: 2000, promo_start: '', promo_end: '', promo_type: 'NONE', promo_value: 0,
+        promo_comm_start: '', promo_comm_end: '', promo_comm_type: 'NONE', promo_comm_value: 0,
+        bkash_api: false, nagad_api: false, bkash_merchant: false, bkash_merchant_number: '',
+        nagad_merchant: false, nagad_merchant_number: '', bkash_personal: false, bkash_personal_number: '',
+        nagad_personal: false, nagad_personal_number: ''
+    });
+
+    const [activeTab, setActiveTab] = useState(user.role === 'ACCOUNTS' ? 'finance_income' : 'home');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isDistMenuOpen, setIsDistMenuOpen] = useState(false);
+    const [isLicenseMenuOpen, setIsLicenseMenuOpen] = useState(false);
+    const [isFinanceMenuOpen, setIsFinanceMenuOpen] = useState(false);
+    const [isMarketingMenuOpen, setIsMarketingMenuOpen] = useState(false);
+    const [shopApproveModal, setShopApproveModal] = useState({ isOpen: false, shop: null });
+
+    const [marketingTargets, setMarketingTargets] = useState([]);
+    const [targetForm, setTargetForm] = useState({
+        name: '', startDate: '', endDate: '', districts: [], thanas: [], idTarget: '', licenseTarget: '', bonus: ''
+    });
+    const [editTargetModal, setEditTargetModal] = useState({ isOpen: false, target: null });
+    const [targetSearchTerm, setTargetSearchTerm] = useState('');
+    const [targetFilterName, setTargetFilterName] = useState('');
+    const [targetFilterStart, setTargetFilterStart] = useState('');
+    const [targetFilterEnd, setTargetFilterEnd] = useState('');
+    const [currentTargetPage, setCurrentTargetPage] = useState(1);
+    const TARGETS_PER_PAGE = 50;
+
+    const [viewDistModal, setViewDistModal] = useState({ isOpen: false, dist: null });
+    const [distFormData, setDistFormData] = useState({
+        fullName: '', businessName: '', fatherName: '', motherName: '',
+        address1: '', address2: '', division: '', district: '', thana: '',
+        phone1: '', phone2: '', password: '', marketDistricts: [], marketThanas: [], marketName: '',
+        commPerUser: '', commPerLicense: '', role: 'DISTRIBUTOR'
+    });
+
+    const [viewDetailsModal, setViewDetailsModal] = useState({ isOpen: false, device: null });
+
+
+    // --- 2. FUNCTIONS & LOGIC ---
 
     const togglePermission = (perm) => {
         setLinduxUserForm(prev => ({
@@ -47,127 +122,6 @@ const AdminDashboard = ({ user, onLogout }) => {
             permissions: prev.permissions.includes(perm) ? prev.permissions.filter(p => p !== perm) : [...prev.permissions, perm]
         }));
     };
-
-    // 🚀 NEW: Password States
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
-
-    // 🚀 NEW: QR Code Modal State & Handlers
-    const [showQrModal, setShowQrModal] = useState(false);
-
-    const handleQrUpload = (e, qrNum) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setSystemConfig(prev => ({ ...prev, [`qr${qrNum}_image`]: reader.result }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    // 🚀 NEW: Secure Action Modal for Track & Uninstall
-    const [secureActionModal, setSecureActionModal] = useState({ isOpen: false, device: null, actionType: '', step: 1, reason: 'Due to Customer Request', customReason: '', password: '' });
-
-    // All Devices View States
-    const [allDevices, setAllDevices] = useState([]);
-    const [deviceSearchTerm, setDeviceSearchTerm] = useState('');
-    const [deviceFilter, setDeviceFilter] = useState('ACTIVE');
-    const [currentDevicePage, setCurrentDevicePage] = useState(1);
-    const DEVICES_PER_PAGE = 50;
-
-    // Shop Tab States
-    const [shopSearchTerm, setShopSearchTerm] = useState('');
-    const [currentShopPage, setCurrentShopPage] = useState(1);
-    const [viewShopModal, setViewShopModal] = useState({ isOpen: false, shop: null });
-    const SHOPS_PER_PAGE = 50;
-
-    // Commission Tab States
-    const [commissionList, setCommissionList] = useState([]);
-    const [commStartDate, setCommStartDate] = useState('');
-    const [commEndDate, setCommEndDate] = useState('');
-    const [viewCommModal, setViewCommModal] = useState({ isOpen: false, dist: null, details: [] });
-
-    // Finance Terminal States
-    const [financeLedger, setFinanceLedger] = useState([]);
-    const [financeStartDate, setFinanceStartDate] = useState('');
-    const [financeEndDate, setFinanceEndDate] = useState('');
-    const [financeSearchTerm, setFinanceSearchTerm] = useState('');
-
-    const [financeFormModal, setFinanceFormModal] = useState({
-        isOpen: false,
-        type: 'INCOME',
-        date: new Date().toISOString().split('T')[0],
-        name: '', description: '', amount: '', remarks: ''
-    });
-
-    // Unused Balance & Recharge States
-    const [unusedBalanceList, setUnusedBalanceList] = useState([]);
-    const [unusedStartDate, setUnusedStartDate] = useState('');
-    const [unusedEndDate, setUnusedEndDate] = useState('');
-    const [viewUnusedModal, setViewUnusedModal] = useState({ isOpen: false, shop: null, history: [] });
-
-    const [rechargeForm, setRechargeForm] = useState({
-        date: new Date().toISOString().split('T')[0],
-        shopId: '', shopName: '', shopOwner: '', phone: '',
-        amount: '', method: 'Cash', otherDetails: ''
-    });
-
-    // Search States for Recharge Dropdown
-    const [rechargeSearchQuery, setRechargeSearchQuery] = useState('');
-    const [isRechargeSearchOpen, setIsRechargeSearchOpen] = useState(false);
-
-    // System Settings
-    const [systemConfig, setSystemConfig] = useState({
-        base_license_price: 2000,
-        promo_start: '', promo_end: '', promo_type: 'NONE', promo_value: 0,
-        promo_comm_start: '', promo_comm_end: '', promo_comm_type: 'NONE', promo_comm_value: 0,
-        bkash_api: false, nagad_api: false,
-        bkash_merchant: false, bkash_merchant_number: '',
-        nagad_merchant: false, nagad_merchant_number: '',
-        bkash_personal: false, bkash_personal_number: '',
-        nagad_personal: false, nagad_personal_number: ''
-    });
-
-    // Modals & Forms
-  //  const [rechargeData, setRechargeData] = useState({ userId: null, userName: '', amount: '' });
-    const [activeTab, setActiveTab] = useState(user.role === 'ACCOUNTS' ? 'finance_income' : 'home');
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isDistMenuOpen, setIsDistMenuOpen] = useState(false);
-    const [isLicenseMenuOpen, setIsLicenseMenuOpen] = useState(false);
-    const [isFinanceMenuOpen, setIsFinanceMenuOpen] = useState(false);
-    const [isMarketingMenuOpen, setIsMarketingMenuOpen] = useState(false);
-   // const [showModal, setShowModal] = useState(false);
-    const [shopApproveModal, setShopApproveModal] = useState({ isOpen: false, shop: null });
-
-    /*
-
-    const processShopApproval = async (shopId, action) => {
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_API_URL}/admin/approve-shopkeeper`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({ shopId, action })
-            });
-
-            if (res.ok) {
-                alert(`✅ SHOP ${action}D SUCCESSFULLY.`);
-                setShopApproveModal({isOpen: false, shop: null});
-                fetchData('auth/operators', setUsers); // Refresh matrix
-            } else {
-                const errorData = await res.json();
-                if (errorData.message === 'TOKEN_EXPIRED_OR_INVALID' || res.status === 401) {
-                    alert("❌ SESSION EXPIRED. Please log in again.");
-                    onLogout();
-                } else {
-                    alert(`❌ ACTION FAILED: ${errorData.message || res.statusText}`);
-                }
-                console.error("BACKEND REJECTION DETAILS:", errorData);
-            }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
-    };
-    */
-
 
     // 🚀 NEW: Create Lindux User Function
     const handleCreateLinduxUser = async (e) => {
@@ -192,42 +146,64 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
-    // 🚀 FIXED: Mirror Protocol Function added here so Lindux Users can be mirrored
+    // 🚀 NEW: Update Lindux User Function
+    const handleUpdateLinduxUser = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                userId: editLinduxUserModal.user._id,
+                name: editLinduxUserModal.user.name,
+                phone: editLinduxUserModal.user.phone,
+                role: editLinduxUserModal.user.role,
+                permissions: editLinduxUserModal.user.permissions
+            };
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/update-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert("✅ USER IDENTITY UPDATED.");
+                setEditLinduxUserModal({ isOpen: false, user: null });
+                fetchData('auth/operators', setUsers);
+            } else {
+                alert("❌ FAILED TO UPDATE USER.");
+            }
+        } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
+    };
+
+    const handleQrUpload = (e, qrNum) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => { setSystemConfig(prev => ({ ...prev, [`qr${qrNum}_image`]: reader.result })); };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleMirror = async (targetId) => {
         if (!window.confirm("⚠️ INITIATE MIRROR PROTOCOL? You will take full control of this identity.")) return;
-
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/mirror-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({ targetUserId: targetId })
             });
-
             if (res.ok) {
                 const data = await res.json();
-
-                // Safely backup Admin Brain
                 localStorage.setItem('original_admin_token', localStorage.getItem('trvnx_token'));
                 localStorage.setItem('original_admin_user', localStorage.getItem('trvnx_user'));
-
-                // Inject Target Brain
                 localStorage.setItem('trvnx_token', data.token);
                 localStorage.setItem('trvnx_user', JSON.stringify(data.user));
-
-                // Hard reboot the system into new identity
                 window.location.reload();
-            } else {
-                alert("❌ MIRROR PROTOCOL FAILED. Target identity locked.");
-            }
+            } else { alert("❌ MIRROR PROTOCOL FAILED. Target identity locked."); }
         } catch (err) { alert("⚠️ SYSTEM OFFLINE."+err.toString()); }
     };
 
-    // 🚀 NEW: Password Function
     const handleChangePassword = async (e) => {
         e.preventDefault();
         if (passwordForm.new !== passwordForm.confirm) return alert("❌ PASSWORDS DO NOT MATCH.");
         if (passwordForm.new.length < 6) return alert("❌ PASSWORD MUST BE AT LEAST 6 CHARACTERS.");
-
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/change-password`, {
                 method: 'POST',
@@ -238,58 +214,24 @@ const AdminDashboard = ({ user, onLogout }) => {
                 alert("✅ PASSWORD UPDATED SUCCESSFULLY.");
                 setShowPasswordModal(false);
                 setPasswordForm({ new: '', confirm: '' });
-            } else {
-                alert("❌ FAILED TO UPDATE PASSWORD.");
-            }
+            } else { alert("❌ FAILED TO UPDATE PASSWORD."); }
         } catch (err) { alert("⚠️ SYSTEM OFFLINE."+err.toString()); }
     };
 
-    // 🚀 ADDED: Handle Track Function
-    /*
-    const handleTrack = async (device, reason = "Admin Action") => {
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/devices/track`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({ deviceId: device._id, reason })
-            });
-            if (res.ok) alert("✅ Tracking signal sent successfully.");
-            else alert("❌ Failed to send tracking signal.");
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
-    };
-
-
-
-    const triggerDeviceUninstall = async (device) => {
-        if (!window.confirm(`WARNING: Master override to permanently release device ${device._id}?`)) return;
-        await fetch(`${import.meta.env.VITE_API_URL}/devices/uninstall`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-            body: JSON.stringify({ deviceId: device._id })
-        });
-        fetchData('devices/all', setAllDevices);
-    };
- */
-    // 🚀 NEW: Execute Secure Multi-Step Action (Track or Uninstall)
     const executeSecureAction = async (e) => {
         e.preventDefault();
         const { device, actionType, reason, customReason, password } = secureActionModal;
         const finalReason = reason === 'Other' ? customReason : reason;
-
         try {
             let endpoint = '';
             let payload = { deviceId: device._id, reason: finalReason, adminPassword: password };
-
-            if (actionType === 'TRACK') {
-                endpoint = `${import.meta.env.VITE_API_URL}/devices/track`;
-            } else if (actionType === 'UNINSTALL') {
-                endpoint = `${import.meta.env.VITE_API_URL}/devices/uninstall`;
-            }
+            if (actionType === 'TRACK') endpoint = `${import.meta.env.VITE_API_URL}/devices/track`;
+            else if (actionType === 'UNINSTALL') endpoint = `${import.meta.env.VITE_API_URL}/devices/uninstall`;
 
             const res = await fetch(endpoint, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
-
             if (res.ok) {
                 alert(`✅ ${actionType} ACTION SUCCESSFUL.`);
                 setSecureActionModal({ isOpen: false, device: null, actionType: '', step: 1, reason: 'Due to Customer Request', customReason: '', password: '' });
@@ -301,48 +243,16 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
-    // 🚀 BULLETPROOF MARKETING STATES
-    const [marketingTargets, setMarketingTargets] = useState([]);
-    const [targetForm, setTargetForm] = useState({
-        name: '', startDate: '', endDate: '', districts: [], thanas: [], idTarget: '', licenseTarget: '', bonus: ''
-    });
-    const [editTargetModal, setEditTargetModal] = useState({ isOpen: false, target: null });
-
-    const allBDDistricts = BD_DATA ? Object.values(BD_DATA).reduce((acc, div) => acc.concat(Object.keys(div)), []).sort() : [];
-
-    const targetAvailableThanas = (Array.isArray(targetForm.districts) && targetForm.districts.length > 0 && BD_DATA)
-        ? targetForm.districts.reduce((acc, dist) => {
-            for (const div in BD_DATA) { if (BD_DATA[div][dist]) return acc.concat(BD_DATA[div][dist]); }
-            return acc;
-        }, []).sort() : [];
-
-    /*
-    const editTargetAvailableThanks = (editTargetModal.target && Array.isArray(editTargetModal.target.districts) && editTargetModal.target.districts.length > 0 && BD_DATA)
-        ? editTargetModal.target.districts.reduce((acc, dist) => {
-            for (const div in BD_DATA) { if (BD_DATA[div][dist]) return acc.concat(BD_DATA[div][dist]); }
-            return acc;
-        }, []).sort() : [];
-
-        */
-
-
     const handleCreateTarget = async (e) => {
         e.preventDefault();
         try {
             const payload = {
-                ...targetForm,
-                target_name: targetForm.name,
-                name: targetForm.name,
-                start_date: targetForm.startDate,
-                startDate: targetForm.startDate,
-                end_date: targetForm.endDate,
-                endDate: targetForm.endDate,
-                id_target: Number(targetForm.idTarget) || 0,
-                target_amount: Number(targetForm.idTarget) || 0,
-                idTarget: Number(targetForm.idTarget) || 0,
-                license_target: Number(targetForm.licenseTarget) || 0,
-                licenseTarget: Number(targetForm.licenseTarget) || 0,
-                bonus_amount: Number(targetForm.bonus) || 0,
+                ...targetForm, target_name: targetForm.name, name: targetForm.name,
+                start_date: targetForm.startDate, startDate: targetForm.startDate,
+                end_date: targetForm.endDate, endDate: targetForm.endDate,
+                id_target: Number(targetForm.idTarget) || 0, target_amount: Number(targetForm.idTarget) || 0,
+                idTarget: Number(targetForm.idTarget) || 0, license_target: Number(targetForm.licenseTarget) || 0,
+                licenseTarget: Number(targetForm.licenseTarget) || 0, bonus_amount: Number(targetForm.bonus) || 0,
                 bonus: Number(targetForm.bonus) || 0
             };
             const res = await fetch(`${import.meta.env.VITE_API_URL}/marketing/create-target`, {
@@ -362,8 +272,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         try {
             const t = editTargetModal.target;
             const updatePayload = {
-                ...t,
-                target_name: t.target_name || t.name,
+                ...t, target_name: t.target_name || t.name,
                 id_target: Number(t.id_target || t.idTarget || t.target_amount || 0),
                 target_amount: Number(t.id_target || t.idTarget || t.target_amount || 0),
                 license_target: Number(t.license_target || t.licenseTarget || 0),
@@ -392,36 +301,11 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
-    const [targetSearchTerm, setTargetSearchTerm] = useState('');
-    const [targetFilterName, setTargetFilterName] = useState('');
-    const [targetFilterStart, setTargetFilterStart] = useState('');
-    const [targetFilterEnd, setTargetFilterEnd] = useState('');
-    const [currentTargetPage, setCurrentTargetPage] = useState(1);
-    const TARGETS_PER_PAGE = 50;
-
-    const [viewDistModal, setViewDistModal] = useState({ isOpen: false, dist: null });
-    const [distFormData, setDistFormData] = useState({
-        fullName: '', businessName: '', fatherName: '', motherName: '',
-        address1: '', address2: '', division: '', district: '', thana: '',
-        phone1: '', phone2: '', password: '',
-        marketDistricts: [], marketThanas: [], marketName: '',
-        commPerUser: '', commPerLicense: '', role: 'DISTRIBUTOR'
-    });
-
-    const [viewDetailsModal, setViewDetailsModal] = useState({ isOpen: false, device: null });
-    const [formData, setFormData] = useState({ name: '', phone: '', role: 'SHOPKEEPER', homeDivision: '', homeDistrict: '', homeThana: '', password: '', managedDivisions: [], managedDistricts: [], managedThanas: [] });
-
     const fetchData = async (endpoint, setter) => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
-
-            if (res.status === 401 || res.status === 403) {
-                console.error(`[401 UNAUTHORIZED] Token Expired for endpoint: ${endpoint}`);
-                return;
-            }
-
+            if (res.status === 401 || res.status === 403) return;
             const data = await res.json();
-
             if (endpoint === 'devices/all') setter(data.devices || data.data || data || []);
             else if (endpoint === 'auth/operators') setter(Array.isArray(data) ? data : (data.users || data.data || []));
             else if (['admin/commissions', 'admin/finance-ledger', 'admin/unused-balance', 'marketing/targets'].includes(endpoint)) {
@@ -441,44 +325,19 @@ const AdminDashboard = ({ user, onLogout }) => {
     };
 
     useEffect(() => {
-        if (['dist_details', 'sr_details', 'shop_list', 'finance_recharge', 'sr_ac', 'marketing_create', 'home', 'lindux_user_list'].includes(activeTab) || activeTab.startsWith('license_')) {
-            fetchData('auth/operators', setUsers);
-        }
-
-        if (['marketing_targets', 'marketing_achievements', 'home'].includes(activeTab)) {
-            fetchData('marketing/targets', setMarketingTargets);
-        }
-
-        if (activeTab === 'finance') fetchData('transactions/pending', setPendingTx);
-
+        if (['dist_details', 'sr_details', 'shop_list', 'finance_recharge', 'sr_ac', 'marketing_create', 'home', 'lindux_user_list'].includes(activeTab) || activeTab.startsWith('license_')) fetchData('auth/operators', setUsers);
+        if (['marketing_targets', 'marketing_achievements', 'home'].includes(activeTab)) fetchData('marketing/targets', setMarketingTargets);
         if (activeTab === 'settings' || activeTab === 'gateways') fetchData('settings', setSystemConfig);
-
         if (activeTab === 'dist_ac') fetchData('admin/commissions', setCommissionList);
-
-        if (['finance_income', 'finance_expense', 'finance_balance', 'finance_payouts', 'sr_ac', 'finance_cashbook', 'finance_entry_income', 'finance_entry_expense', 'home'].includes(activeTab)) {
-            fetchData('admin/finance-ledger', setFinanceLedger);
-        }
-
+        if (['finance_income', 'finance_expense', 'finance_balance', 'finance_payouts', 'sr_ac', 'finance_cashbook', 'finance_entry_income', 'finance_entry_expense', 'home'].includes(activeTab)) fetchData('admin/finance-ledger', setFinanceLedger);
         if (activeTab === 'finance_unused') fetchData('admin/unused-balance', setUnusedBalanceList);
-
-        if (activeTab === 'all_devices' || activeTab === 'home') {
-            fetchData('devices/all', setAllDevices);
-        }
-        if (activeTab === 'activity_logs') {
-            fetchData('admin/audit-logs', setActivityLogs);
-        }
+        if (activeTab === 'all_devices' || activeTab === 'home') fetchData('devices/all', setAllDevices);
+        if (activeTab === 'activity_logs') fetchData('admin/audit-logs', setActivityLogs);
     }, [activeTab]);
 
-    // 🚀 NEW: Automatic Polling Sync Logic
     useEffect(() => {
-        // Only run polling loop if we are on the devices tab
         if (activeTab === 'all_devices') {
-            // Re-fetch the data from the backend matrix every 60 seconds
-            const syncInterval = setInterval(() => {
-                fetchData('devices/all', setAllDevices);
-            }, 60000); // Poll every 60,000ms
-
-            // Cleanup function is critical: Clears interval when user closes tab
+            const syncInterval = setInterval(() => { fetchData('devices/all', setAllDevices); }, 60000);
             return () => clearInterval(syncInterval);
         }
     }, [activeTab]);
@@ -493,23 +352,10 @@ const AdminDashboard = ({ user, onLogout }) => {
         }
     }, [rechargeForm.shopId, users]);
 
-    /*
-         const handleManualRecharge = async (e) => {
-            e.preventDefault();
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/manual-recharge`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({ userId: rechargeData.userId, amount: rechargeData.amount })
-            });
-            if (res.ok) { setShowRechargeModal(false); fetchData('auth/operators', setUsers); alert("Wallet Adjusted Successfully."); }
-        };
-     */
-
     const handleUpdateSettings = async (e) => {
         e.preventDefault();
         const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
             body: JSON.stringify(systemConfig)
         });
         if (res.ok) alert("✅ SYSTEM_SYNC: Global matrix updated.");
@@ -520,13 +366,11 @@ const AdminDashboard = ({ user, onLogout }) => {
         try {
             const entryType = forceType || (financeFormModal.type === 'INCOME' ? 'MANUAL_INCOME' : 'MANUAL_EXPENSE');
             const payload = {
-                type: entryType,
-                name: financeFormModal.name, description: financeFormModal.description,
+                type: entryType, name: financeFormModal.name, description: financeFormModal.description,
                 amount: Number(financeFormModal.amount), remarks: financeFormModal.remarks, date: financeFormModal.date
             };
             const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/finance-entry`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
@@ -723,11 +567,12 @@ const AdminDashboard = ({ user, onLogout }) => {
         doc.save(`Unused_Statement_${viewUnusedModal.shop.shop_id.slice(-6)}.pdf`);
     };
 
+    // --- 3. DATA DERIVATIONS ---
+
     const allDivisions = BD_DATA ? Object.keys(BD_DATA) : [];
     const currentDistricts = (distFormData.division && BD_DATA && BD_DATA[distFormData.division]) ? Object.keys(BD_DATA[distFormData.division]) : [];
     const currentThanas = (distFormData.district && BD_DATA && BD_DATA[distFormData.division] && BD_DATA[distFormData.division][distFormData.district]) ? BD_DATA[distFormData.division][distFormData.district] : [];
     const marketAreaThanas = distFormData.marketDistricts.length > 0 && BD_DATA ? Array.from(new Set(distFormData.marketDistricts.flatMap(d => (distFormData.division && BD_DATA[distFormData.division] && BD_DATA[distFormData.division][d]) ? BD_DATA[distFormData.division][d] : []))) : [];
-
     const linduxUserCurrentDistricts = (linduxUserForm.division && BD_DATA && BD_DATA[linduxUserForm.division]) ? Object.keys(BD_DATA[linduxUserForm.division]) : [];
     const linduxUserCurrentThanas = (linduxUserForm.district && BD_DATA && BD_DATA[linduxUserForm.division] && BD_DATA[linduxUserForm.division][linduxUserForm.district]) ? BD_DATA[linduxUserForm.division][linduxUserForm.district] : [];
 
@@ -735,29 +580,23 @@ const AdminDashboard = ({ user, onLogout }) => {
     const canSeeRegistry = ['SUPER_ADMIN', 'ADMIN', 'MARKETING', 'CALL_CENTER'].includes(user.role);
     const canSeeSettings = ['SUPER_ADMIN', 'ADMIN'].includes(user.role);
 
-    // 🚀 NEW DEVICE FILTERING LOGIC
     const filteredDevices = allDevices.filter(d => {
         if (!d) return false;
-
-        // 1. Search Check
         const searchStr = deviceSearchTerm.toLowerCase();
         const matchesSearch = d.customer_name?.toLowerCase().includes(searchStr) || d.customer_phone?.includes(searchStr);
-
-        // 2. Status Check
         const isUninstalled = d.is_uninstalled === true || d.status === 'UNINSTALLED' || d.device_status === 'UNINSTALLED' || d.license_status === 'UNINSTALLED';
         const isLocked = d.is_locked === true;
-
         let matchesFilter = true;
-        if (deviceFilter === 'ALL') matchesFilter = true; // 🚀 FIX: The new filter logic
+        if (deviceFilter === 'ALL') matchesFilter = true;
         else if (deviceFilter === 'ACTIVE') matchesFilter = !isUninstalled;
         else if (deviceFilter === 'LOCKED') matchesFilter = !isUninstalled && isLocked;
         else if (deviceFilter === 'UNLOCKED') matchesFilter = !isUninstalled && !isLocked;
         else if (deviceFilter === 'UNINSTALLED') matchesFilter = isUninstalled;
-
         return matchesSearch && matchesFilter;
     });
     const totalDevicePages = Math.ceil(filteredDevices.length / DEVICES_PER_PAGE) || 1;
     const paginatedDevices = filteredDevices.slice((currentDevicePage - 1) * DEVICES_PER_PAGE, currentDevicePage * DEVICES_PER_PAGE);
+
     const validUsers = Array.isArray(users) ? users : [];
     const shopUsers = validUsers.filter(u => u && u.role === 'SHOPKEEPER');
     const totalNotifications = shopUsers.filter(s => ['WAITING_ADMIN', 'WAITING_DISTRIBUTOR'].includes(s.approval?.status)).length;
@@ -769,10 +608,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     });
 
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const escalatedShops = shopUsers.filter(shop =>
-        shop.approval?.status === 'WAITING_DISTRIBUTOR' &&
-        new Date(shop.approval?.requested_at || shop.createdAt) < fortyEightHoursAgo
-    );
+    const escalatedShops = shopUsers.filter(shop => shop.approval?.status === 'WAITING_DISTRIBUTOR' && new Date(shop.approval?.requested_at || shop.createdAt) < fortyEightHoursAgo);
 
     const filteredShops = shopUsers.filter(u => {
         if (!u) return false;
@@ -794,7 +630,6 @@ const AdminDashboard = ({ user, onLogout }) => {
         return true;
     });
 
-    // 🚀 FIX: Bulletproof Filtering for Old & New Database Records
     const filteredLedger = financeLedger.filter(tx => {
         if (!tx) return false;
         let match = true;
@@ -804,8 +639,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         }
         if (match && (financeStartDate || financeEndDate)) {
             const txDateStr = tx.createdAt || tx.date;
-            if (!txDateStr) return true; // Safety against missing dates
-
+            if (!txDateStr) return true;
             const txDate = new Date(txDateStr).setHours(0,0,0,0);
             const start = financeStartDate ? new Date(financeStartDate).setHours(0,0,0,0) : null;
             const end = financeEndDate ? new Date(financeEndDate).setHours(23,59,59,999) : null;
@@ -816,7 +650,6 @@ const AdminDashboard = ({ user, onLogout }) => {
         return match;
     });
 
-    // 🚀 FIX: Includes old types like 'INCOME' and 'EXPENSE'
     const incomeEntries = filteredLedger.filter(tx => tx && (['MANUAL_INCOME', 'RECHARGE', 'INCOME', 'LICENSE_ACTIVATION'].includes(tx.type)));
     const expenseEntries = filteredLedger.filter(tx => tx && (['MANUAL_EXPENSE', 'COMMISSION', 'SR_PAYOUT', 'EXPENSE'].includes(tx.type)));
     const totalIncome = incomeEntries.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
@@ -829,7 +662,6 @@ const AdminDashboard = ({ user, onLogout }) => {
             if (!tx) return false;
             const txDateStr = tx.date || tx.createdAt;
             if (!txDateStr) return true;
-
             const txDate = new Date(txDateStr).setHours(0,0,0,0);
             const start = unusedStartDate ? new Date(unusedStartDate).setHours(0,0,0,0) : null;
             const end = unusedEndDate ? new Date(unusedEndDate).setHours(23,59,59,999) : null;
@@ -848,39 +680,30 @@ const AdminDashboard = ({ user, onLogout }) => {
     const allThanaNames = allDivisions ? allDivisions.flatMap(div => BD_DATA[div] ? Object.keys(BD_DATA[div]).flatMap(dist => BD_DATA[div][dist] || []) : []).map(t => `THANA: ${t}`) : [];
     const marketOptions = Array.from(new Set([...distributorNames, ...allDistrictNames, ...allThanaNames].filter(Boolean)));
 
-    // 🚀 IMPROVED: Smart Filtering for Marketing Targets
     const filteredMarketingTargets = (marketingTargets || []).filter(t => {
         if (!t) return false;
         let match = true;
-
         const search = targetSearchTerm.toLowerCase();
         const tName = (t.target_name || t.name || '').toLowerCase();
         const tArea = Array.isArray(t.districts) ? t.districts.join(' ').toLowerCase() : '';
-
-        // Only filter if the user actually typed something
-        if (targetSearchTerm) {
-            match = match && (tName.includes(search) || tArea.includes(search));
-        }
-        if (targetFilterName) {
-            match = match && tName.includes(targetFilterName.toLowerCase());
-        }
-
-        // Date filtering
+        if (targetSearchTerm) match = match && (tName.includes(search) || tArea.includes(search));
+        if (targetFilterName) match = match && tName.includes(targetFilterName.toLowerCase());
         if (targetFilterStart && t.start_date) match = match && new Date(t.start_date) >= new Date(targetFilterStart);
         if (targetFilterEnd && t.end_date) match = match && new Date(t.end_date) <= new Date(targetFilterEnd);
-
         return match;
     });
 
     const paginatedMarketingTargets = filteredMarketingTargets.slice((currentTargetPage - 1) * TARGETS_PER_PAGE, currentTargetPage * TARGETS_PER_PAGE);
 
-    // 🚀 NEW: Reset page to 1 when switching tabs to prevent "Blank Page" bug
     useEffect(() => {
         setCurrentTargetPage(1);
         setTargetSearchTerm('');
     }, [activeTab]);
 
-    return (<div className="min-h-screen bg-[#050A15] text-white font-mono flex relative overflow-hidden uppercase">
+    // --- 4. RENDER UI ---
+
+    return (
+        <div className="min-h-screen bg-[#050A15] text-white font-mono flex relative overflow-hidden uppercase">
 
             <Sidebar
                 pendingShopCount={totalNotifications}
@@ -892,8 +715,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                 isLicenseMenuOpen={isLicenseMenuOpen} setIsLicenseMenuOpen={setIsLicenseMenuOpen}
                 onPasswordClick={() => setShowPasswordModal(true)}
                 isLinduxUserMenuOpen={isLinduxUserMenuOpen} setIsLinduxUserMenuOpen={setIsLinduxUserMenuOpen}
-
-                // 🚀 PASSING THE POPUP TRIGGER TO THE SIDEBAR
                 onQrSetupClick={() => setShowQrModal(true)}
             />
 
@@ -920,8 +741,6 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar uppercase font-bold">
 
-
-                    {/* 🚀 NEW: LINDUX USER CREATE FORM */}
                     {activeTab === 'lindux_user_create' && (
                         <div className="max-w-4xl mx-auto mb-8">
                             <form onSubmit={handleCreateLinduxUser} className="bg-[#111A35] p-8 border border-cyan-900/30 rounded shadow-2xl space-y-6 relative overflow-hidden uppercase font-bold text-[10px]">
@@ -979,7 +798,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* 🚀 NEW: LINDUX USER LIST TABLE */}
                     {activeTab === 'lindux_user_list' && (
                         <div className="bg-[#111A35] border border-[#273A60] rounded overflow-hidden shadow-2xl uppercase">
                             <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
@@ -1040,7 +858,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                             </div>
                         </div>
                     )}
-                    {/* 🚀 NEW: VIEW LINDUX USER MODAL */}
+
                     {viewLinduxUserModal.isOpen && viewLinduxUserModal.user && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[500] p-4">
                             <div className="bg-[#111A35] border border-cyan-900/50 p-6 rounded-lg w-full max-w-2xl shadow-2xl">
@@ -1050,16 +868,15 @@ const AdminDashboard = ({ user, onLogout }) => {
                                 </div>
                                 <div className="space-y-4 text-xs font-bold text-gray-300">
                                     <p><span className="text-cyan-500">ID:</span> {viewLinduxUserModal.user._id}</p>
-                                    <p><span className="text-cyan-500">NAME:</span> {viewLinduxUserModal.user.name}</p>
-                                    <p><span className="text-cyan-500">PHONE:</span> {viewLinduxUserModal.user.phone}</p>
-                                    <p><span className="text-cyan-500">ROLE:</span> <span className="text-red-400">{viewLinduxUserModal.user.role}</span></p>
-                                    <p><span className="text-cyan-500">PERMISSIONS:</span> {viewLinduxUserModal.user.permissions?.join(', ') || 'Global Default'}</p>
+                                    <p><span className="text-cyan-500">NAME:</span> {viewLinduxUserModal.user.name || 'N/A'}</p>
+                                    <p><span className="text-cyan-500">PHONE:</span> {viewLinduxUserModal.user.phone || 'N/A'}</p>
+                                    <p><span className="text-cyan-500">ROLE:</span> <span className="text-red-400">{viewLinduxUserModal.user.role || 'N/A'}</span></p>
+                                    <p><span className="text-cyan-500">PERMISSIONS:</span> {Array.isArray(viewLinduxUserModal.user.permissions) && viewLinduxUserModal.user.permissions.length > 0 ? viewLinduxUserModal.user.permissions.join(', ') : 'Global Default'}</p>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* 🚀 NEW: EDIT LINDUX USER MODAL */}
                     {editLinduxUserModal.isOpen && editLinduxUserModal.user && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[500] p-4">
                             <div className="bg-[#111A35] border border-yellow-900/50 p-6 rounded-lg w-full max-w-2xl shadow-2xl">
@@ -1070,16 +887,16 @@ const AdminDashboard = ({ user, onLogout }) => {
                                 <form onSubmit={handleUpdateLinduxUser} className="space-y-4 text-[10px]">
                                     <div>
                                         <label className="text-gray-500 tracking-widest mb-1 block">NAME</label>
-                                        <input type="text" value={editLinduxUserModal.user.name} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, name: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-white outline-none rounded" />
+                                        <input type="text" value={editLinduxUserModal.user.name || ''} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, name: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-white outline-none rounded" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="text-gray-500 tracking-widest mb-1 block">PHONE</label>
-                                            <input type="text" value={editLinduxUserModal.user.phone} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, phone: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-cyan-500 outline-none rounded" />
+                                            <input type="text" value={editLinduxUserModal.user.phone || ''} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, phone: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-cyan-500 outline-none rounded" />
                                         </div>
                                         <div>
                                             <label className="text-gray-500 tracking-widest mb-1 block">ROLE</label>
-                                            <select value={editLinduxUserModal.user.role} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, role: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-red-400 outline-none rounded">
+                                            <select value={editLinduxUserModal.user.role || 'ADMIN'} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, role: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-red-400 outline-none rounded">
                                                 <option value="ADMIN">ADMIN</option>
                                                 <option value="ACCOUNTS">ACCOUNTS</option>
                                                 <option value="MARKETING">MARKETING</option>
@@ -1094,9 +911,9 @@ const AdminDashboard = ({ user, onLogout }) => {
                                                 <label key={perm} className="flex items-center gap-3 text-gray-300 cursor-pointer hover:text-cyan-400">
                                                     <input
                                                         type="checkbox"
-                                                        checked={editLinduxUserModal.user.permissions?.includes(perm) || false}
+                                                        checked={Array.isArray(editLinduxUserModal.user.permissions) ? editLinduxUserModal.user.permissions.includes(perm) : false}
                                                         onChange={() => {
-                                                            const currentPerms = editLinduxUserModal.user.permissions || [];
+                                                            const currentPerms = Array.isArray(editLinduxUserModal.user.permissions) ? editLinduxUserModal.user.permissions : [];
                                                             const newPerms = currentPerms.includes(perm) ? currentPerms.filter(p => p !== perm) : [...currentPerms, perm];
                                                             setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, permissions: newPerms}});
                                                         }}
@@ -1112,13 +929,13 @@ const AdminDashboard = ({ user, onLogout }) => {
                             </div>
                         </div>
                     )}
+
                     {activeTab === 'home' && <HomeDashboard user={user} allDevices={allDevices} financeLedger={financeLedger} marketingTargets={marketingTargets} />}
 
                     {activeTab.startsWith('license_') && (
                         <LicenseFee activeTab={activeTab} setActiveTab={setActiveTab} marketOptions={marketOptions || []} />
                     )}
 
-                    {/* 🚀 PAYMENT GATEWAYS TAB */}
                     {activeTab === 'gateways' && (
                         <div className="bg-[#111A35] border border-[#273A60] rounded-xl shadow-2xl p-6 md:p-8 uppercase font-bold max-w-4xl mx-auto mt-4">
                             <div className="border-b border-[#273A60] pb-4 mb-6 flex justify-between items-center">
@@ -1297,7 +1114,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         />
                     )}
 
-                    {/* 🚀 DELEGATE MARKETING TABS TO MARKETING.JSX */}
                     {(activeTab === 'marketing_targets' || activeTab === 'marketing_achievements') && (
                         <Marketing
                             activeTab={activeTab}
@@ -1331,7 +1147,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         />
                     )}
 
-                    {/* 🚀 DELEGATE ALL FINANCE TABS TO FINANCE.JSX */}
                     {(activeTab.startsWith('finance') || activeTab.startsWith('entry_')) && (
                         <Finance
                             activeTab={activeTab}
@@ -1377,7 +1192,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         />
                     )}
 
-                    {/* 🚀 DELEGATE DISTRIBUTOR & SR TABS */}
                     {['dist_create', 'dist_ac', 'dist_details', 'sr_details', 'sr_ac'].includes(activeTab) && (
                         <DistributorSR
                             activeTab={activeTab}
@@ -1406,7 +1220,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         />
                     )}
 
-                    {/* 🚀 ACTIVITY LOGS TAB */}
                     {activeTab === 'activity_logs' && (
                         <ActivityLog
                             logs={activityLogs}
@@ -1414,7 +1227,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         />
                     )}
 
-                    {/* 🚀 CHANGE PASSWORD MODAL */}
                     {showPasswordModal && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[500]">
                             <div className="bg-[#111A35] border border-[#273A60] rounded-xl p-8 max-w-md w-full shadow-2xl relative uppercase font-bold">
@@ -1435,7 +1247,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* 🚀 NEW: QR CODE SETUP MODAL */}
                     {showQrModal && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[500]">
                             <div className="bg-[#111A35] border border-[#273A60] rounded-xl p-8 max-w-md w-full shadow-2xl relative uppercase font-bold">
@@ -1472,7 +1283,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* 🚀 VIEW CUSTOMER DETAILS MODAL (LIKE SHOPKEEPER DASHBOARD) */}
                     {viewDetailsModal.isOpen && viewDetailsModal.device && (
                         <div className="fixed inset-0 bg-[#050A15]/95 flex items-center justify-center p-4 z-[500]">
                             <div className="bg-[#0A1128] border border-[#273A60] rounded-xl w-full max-w-2xl p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto font-mono uppercase font-bold">
@@ -1512,7 +1322,6 @@ const AdminDashboard = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* 🚀 SECURE ACTION MODAL (TRACK / UNINSTALL) */}
                     {secureActionModal.isOpen && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[500]">
                             <div className="bg-[#111A35] border border-red-500/50 p-8 rounded-xl w-full max-w-sm shadow-2xl font-mono uppercase text-white">
