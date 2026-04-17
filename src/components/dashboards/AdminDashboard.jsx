@@ -169,29 +169,26 @@ const AdminDashboard = ({ user, onLogout }) => {
     */
 
 
-    // 🚀 NEW: Update Lindux User Function
-    const handleUpdateLinduxUser = async (e) => {
+    // 🚀 NEW: Create Lindux User Function
+    const handleCreateLinduxUser = async (e) => {
         e.preventDefault();
+        const payload = {
+            name: linduxUserForm.name, phone: linduxUserForm.phone1, phone_alt: linduxUserForm.phone2,
+            password: linduxUserForm.password, father_name: linduxUserForm.fatherName, mother_name: linduxUserForm.motherName,
+            role: linduxUserForm.role, permissions: linduxUserForm.permissions, createdBy: user.id || user._id,
+            address: { line1: linduxUserForm.address1, line2: linduxUserForm.address2, division: linduxUserForm.division, district: linduxUserForm.district, thana: linduxUserForm.thana }
+        };
         try {
-            const payload = {
-                userId: editLinduxUserModal.user._id,
-                name: editLinduxUserModal.user.name,
-                phone: editLinduxUserModal.user.phone,
-                role: editLinduxUserModal.user.role,
-                permissions: editLinduxUserModal.user.permissions
-            };
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/update-user`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
-                alert("✅ USER IDENTITY UPDATED.");
-                setEditLinduxUserModal({ isOpen: false, user: null });
+                alert("✅ LINDUX USER CREATED.");
+                setLinduxUserForm({ name: '', password: '', fatherName: '', motherName: '', phone1: '', phone2: '', address1: '', address2: '', division: '', district: '', thana: '', role: 'ADMIN', permissions: [] });
                 fetchData('auth/operators', setUsers);
-            } else {
-                alert("❌ FAILED TO UPDATE USER.");
-            }
+                setActiveTab('lindux_user_list');
+            } else { alert("❌ CREATION FAILED."); }
         } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
@@ -926,7 +923,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                     {/* 🚀 NEW: LINDUX USER CREATE FORM */}
                     {activeTab === 'lindux_user_create' && (
-                        <div className="max-w-4xl mx-auto">
+                        <div className="max-w-4xl mx-auto mb-8">
                             <form onSubmit={handleCreateLinduxUser} className="bg-[#111A35] p-8 border border-cyan-900/30 rounded shadow-2xl space-y-6 relative overflow-hidden uppercase font-bold text-[10px]">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
                                 <h3 className="text-cyan-400 text-xs tracking-[0.2em] border-b border-[#273A60] pb-4 italic">Initialize Lindux User Profile</h3>
