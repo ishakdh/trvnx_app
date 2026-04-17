@@ -20,6 +20,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     // --- 1. STATE INITIALIZATION ---
     const [users, setUsers] = useState([]);
     const [activityLogs, setActivityLogs] = useState([]);
+    const [currentFallbackDate] = useState(() => Date.now());
 
     const [viewLinduxUserModal, setViewLinduxUserModal] = useState({ isOpen: false, user: null });
     const [editLinduxUserModal, setEditLinduxUserModal] = useState({ isOpen: false, user: null });
@@ -123,7 +124,6 @@ const AdminDashboard = ({ user, onLogout }) => {
         }));
     };
 
-    // 🚀 NEW: Create Lindux User Function
     const handleCreateLinduxUser = async (e) => {
         e.preventDefault();
         const payload = {
@@ -146,7 +146,6 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
-    // 🚀 NEW: Update Lindux User Function
     const handleUpdateLinduxUser = async (e) => {
         e.preventDefault();
         try {
@@ -343,13 +342,16 @@ const AdminDashboard = ({ user, onLogout }) => {
     }, [activeTab]);
 
     useEffect(() => {
-        if (rechargeForm.shopId.length >= 24) {
-            const validUsers = Array.isArray(users) ? users : [];
-            const foundShop = validUsers.find(u => u._id === rechargeForm.shopId && u.role === 'SHOPKEEPER');
-            if (foundShop) setRechargeForm(prev => ({ ...prev, shopName: foundShop.business_name || 'N/A', shopOwner: foundShop.name, phone: foundShop.phone }));
-        } else {
-            setRechargeForm(prev => ({...prev, shopName: '', shopOwner: '', phone: ''}));
-        }
+        const timer = setTimeout(() => {
+            if (rechargeForm.shopId.length >= 24) {
+                const validUsers = Array.isArray(users) ? users : [];
+                const foundShop = validUsers.find(u => u._id === rechargeForm.shopId && u.role === 'SHOPKEEPER');
+                if (foundShop) setRechargeForm(prev => ({ ...prev, shopName: foundShop.business_name || 'N/A', shopOwner: foundShop.name, phone: foundShop.phone }));
+            } else {
+                setRechargeForm(prev => ({...prev, shopName: '', shopOwner: '', phone: ''}));
+            }
+        }, 0);
+        return () => clearTimeout(timer);
     }, [rechargeForm.shopId, users]);
 
     const handleUpdateSettings = async (e) => {
@@ -449,7 +451,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 setActiveTab('dist_details');
                 setDistFormData({ fullName: '', businessName: '', fatherName: '', motherName: '', address1: '', address2: '', division: '', district: '', thana: '', phone1: '', phone2: '', password: '', marketDistricts: [], marketThanas: [], marketName: '', commPerUser: '', commPerLicense: '', role: 'DISTRIBUTOR' });
             } else alert(`CREATION FAILED: ${data.message || 'Unknown Server Error'}`);
-        } catch (error) { alert("CREATION FAILED: Backend server is offline or unreachable."); }
+        } catch (err) { alert("CREATION FAILED: Backend server is offline or unreachable. " + err.message); }
     };
 
     const toggleUserLock = async (userId, currentStatus) => {
@@ -480,7 +482,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         const dp = Number(device.down_payment) || 0;
         const months = Number(device.installment_months) || 1;
         let remainingPaid = (Number(device.paid_so_far) || 0) - dp;
-        let baseDate = new Date(device.createdAt || Date.now());
+        let baseDate = new Date(device.createdAt || currentFallbackDate);
         const trueBaseEmi = getTrueEmi(device);
         let firstDueFound = false;
 
@@ -576,9 +578,13 @@ const AdminDashboard = ({ user, onLogout }) => {
     const linduxUserCurrentDistricts = (linduxUserForm.division && BD_DATA && BD_DATA[linduxUserForm.division]) ? Object.keys(BD_DATA[linduxUserForm.division]) : [];
     const linduxUserCurrentThanas = (linduxUserForm.district && BD_DATA && BD_DATA[linduxUserForm.division] && BD_DATA[linduxUserForm.division][linduxUserForm.district]) ? BD_DATA[linduxUserForm.division][linduxUserForm.district] : [];
 
-    const canSeeFinance = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTS'].includes(user.role);
-    const canSeeRegistry = ['SUPER_ADMIN', 'ADMIN', 'MARKETING', 'CALL_CENTER'].includes(user.role);
-    const canSeeSettings = ['SUPER_ADMIN', 'ADMIN'].includes(user.role);
+    // 🚀 NEW: Re-added missing arrays with safe .slice().sort() for purity
+    const allBDDistricts = BD_DATA ? Object.values(BD_DATA).reduce((acc, div) => acc.concat(Object.keys(div)), []).slice().sort() : [];
+    const targetAvailableThanas = (Array.isArray(targetForm.districts) && targetForm.districts.length > 0 && BD_DATA)
+        ? targetForm.districts.reduce((acc, dist) => {
+            for (const div in BD_DATA) { if (BD_DATA[div][dist]) return acc.concat(BD_DATA[div][dist]); }
+            return acc;
+        }, []).slice().sort() : [];
 
     const filteredDevices = allDevices.filter(d => {
         if (!d) return false;
@@ -607,7 +613,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         return (u.business_name?.toLowerCase().includes(term) || u.name?.toLowerCase().includes(term) || u.phone?.toLowerCase().includes(term) || u._id?.toLowerCase().includes(term));
     });
 
-    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const fortyEightHoursAgo = new Date(currentFallbackDate - 48 * 60 * 60 * 1000);
     const escalatedShops = shopUsers.filter(shop => shop.approval?.status === 'WAITING_DISTRIBUTOR' && new Date(shop.approval?.requested_at || shop.createdAt) < fortyEightHoursAgo);
 
     const filteredShops = shopUsers.filter(u => {
@@ -696,8 +702,11 @@ const AdminDashboard = ({ user, onLogout }) => {
     const paginatedMarketingTargets = filteredMarketingTargets.slice((currentTargetPage - 1) * TARGETS_PER_PAGE, currentTargetPage * TARGETS_PER_PAGE);
 
     useEffect(() => {
-        setCurrentTargetPage(1);
-        setTargetSearchTerm('');
+        const timer = setTimeout(() => {
+            setCurrentTargetPage(1);
+            setTargetSearchTerm('');
+        }, 0);
+        return () => clearTimeout(timer);
     }, [activeTab]);
 
     // --- 4. RENDER UI ---
@@ -1134,6 +1143,9 @@ const AdminDashboard = ({ user, onLogout }) => {
                             filteredMarketingTargets={filteredMarketingTargets}
                             targetSearchTerm={targetSearchTerm}
                             setTargetSearchTerm={setTargetSearchTerm}
+                            setTargetFilterName={setTargetFilterName}
+                            setTargetFilterStart={setTargetFilterStart}
+                            setTargetFilterEnd={setTargetFilterEnd}
                         />
                     )}
 
@@ -1189,6 +1201,9 @@ const AdminDashboard = ({ user, onLogout }) => {
                             handleReleasePayout={handleReleasePayout}
                             fetchData={fetchData}
                             user={user}
+                            generateFinancePDF={generateFinancePDF}
+                            generateRechargeInvoicePDF={generateRechargeInvoicePDF}
+                            generateUnusedStatementPDF={generateUnusedStatementPDF}
                         />
                     )}
 
@@ -1217,6 +1232,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                             toggleUserLock={toggleUserLock}
                             viewDistModal={viewDistModal}
                             setViewDistModal={setViewDistModal}
+                            filteredCommissions={filteredCommissions}
                         />
                     )}
 
@@ -1389,3 +1405,5 @@ const AdminDashboard = ({ user, onLogout }) => {
 };
 
 export default AdminDashboard;
+
+
