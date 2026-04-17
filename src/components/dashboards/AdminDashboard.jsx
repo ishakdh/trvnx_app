@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BD_DATA } from '../../utils/bd_geo.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -21,10 +21,10 @@ import Marketing from './Marketing.jsx';
 const AdminDashboard = ({ user, onLogout }) => {
     // State Matrix
     const [users, setUsers] = useState([]);
-    const [pendingTx, setPendingTx] = useState([]);
-    const [activeSlip, setActiveSlip] = useState(null);
-    const [feeOverride, setFeeOverride] = useState({});
-    const [showRechargeModal, setShowRechargeModal] = useState(false);
+    // const [pendingTx, setPendingTx] = useState([]);
+    // const [activeSlip, setActiveSlip] = useState(null);
+    // const [feeOverride, setFeeOverride] = useState({});
+    // const [showRechargeModal, setShowRechargeModal] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
 
     // 🚀 NEW: Lindux User Menu States & Data
@@ -127,15 +127,17 @@ const AdminDashboard = ({ user, onLogout }) => {
     });
 
     // Modals & Forms
-    const [rechargeData, setRechargeData] = useState({ userId: null, userName: '', amount: '' });
+  //  const [rechargeData, setRechargeData] = useState({ userId: null, userName: '', amount: '' });
     const [activeTab, setActiveTab] = useState(user.role === 'ACCOUNTS' ? 'finance_income' : 'home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isDistMenuOpen, setIsDistMenuOpen] = useState(false);
     const [isLicenseMenuOpen, setIsLicenseMenuOpen] = useState(false);
     const [isFinanceMenuOpen, setIsFinanceMenuOpen] = useState(false);
     const [isMarketingMenuOpen, setIsMarketingMenuOpen] = useState(false);
-    const [showModal, setShowModal] = useState(false);
+   // const [showModal, setShowModal] = useState(false);
     const [shopApproveModal, setShopApproveModal] = useState({ isOpen: false, shop: null });
+
+    /*
 
     const processShopApproval = async (shopId, action) => {
         try {
@@ -161,6 +163,8 @@ const AdminDashboard = ({ user, onLogout }) => {
             }
         } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
     };
+    */
+
 
     // 🚀 NEW: Create Lindux User Function
     const handleCreateLinduxUser = async (e) => {
@@ -182,7 +186,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 fetchData('auth/operators', setUsers);
                 setActiveTab('lindux_user_list');
             } else { alert("❌ CREATION FAILED."); }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
     // 🚀 FIXED: Mirror Protocol Function added here so Lindux Users can be mirrored
@@ -212,7 +216,7 @@ const AdminDashboard = ({ user, onLogout }) => {
             } else {
                 alert("❌ MIRROR PROTOCOL FAILED. Target identity locked.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { alert("⚠️ SYSTEM OFFLINE."+err.toString()); }
     };
 
     // 🚀 NEW: Password Function
@@ -234,10 +238,11 @@ const AdminDashboard = ({ user, onLogout }) => {
             } else {
                 alert("❌ FAILED TO UPDATE PASSWORD.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { alert("⚠️ SYSTEM OFFLINE."+err.toString()); }
     };
 
     // 🚀 ADDED: Handle Track Function
+    /*
     const handleTrack = async (device, reason = "Admin Action") => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/devices/track`, {
@@ -250,6 +255,8 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
     };
 
+
+
     const triggerDeviceUninstall = async (device) => {
         if (!window.confirm(`WARNING: Master override to permanently release device ${device._id}?`)) return;
         await fetch(`${import.meta.env.VITE_API_URL}/devices/uninstall`, {
@@ -258,7 +265,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         });
         fetchData('devices/all', setAllDevices);
     };
-
+ */
     // 🚀 NEW: Execute Secure Multi-Step Action (Track or Uninstall)
     const executeSecureAction = async (e) => {
         e.preventDefault();
@@ -288,7 +295,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 const err = await res.json();
                 alert(`❌ FAILED: ${err.message || 'Incorrect Password'}`);
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
     // 🚀 BULLETPROOF MARKETING STATES
@@ -479,20 +486,22 @@ const AdminDashboard = ({ user, onLogout }) => {
         }
     }, [rechargeForm.shopId, users]);
 
-    const handleManualRecharge = async (e) => {
-        e.preventDefault();
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/manual-recharge`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-            body: JSON.stringify({ userId: rechargeData.userId, amount: rechargeData.amount })
-        });
-        if (res.ok) { setShowRechargeModal(false); fetchData('auth/operators', setUsers); alert("Wallet Adjusted Successfully."); }
-    };
+    /*
+         const handleManualRecharge = async (e) => {
+            e.preventDefault();
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/manual-recharge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                body: JSON.stringify({ userId: rechargeData.userId, amount: rechargeData.amount })
+            });
+            if (res.ok) { setShowRechargeModal(false); fetchData('auth/operators', setUsers); alert("Wallet Adjusted Successfully."); }
+        };
+     */
 
     const handleUpdateSettings = async (e) => {
         e.preventDefault();
         const res = await fetch(`${import.meta.env.VITE_API_URL}/settings`, {
-            method: 'PATCH',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
             body: JSON.stringify(systemConfig)
         });
@@ -534,7 +543,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
-                const data = await res.json();
+                await res.json();
                 alert("✅ RECHARGE SUCCESSFUL. INVOICE GENERATED IN BACKEND...");
                 setRechargeForm({ date: new Date().toISOString().split('T')[0], shopId: '', shopName: '', shopOwner: '', phone: '', amount: '', method: 'Cash', otherDetails: '' });
                 setRechargeSearchQuery('');
@@ -594,7 +603,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     const toggleUserLock = async (userId, currentStatus) => {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/toggle-status`, {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
             body: JSON.stringify({ userId, status: currentStatus === 'ACTIVE' ? 'LOCKED' : 'ACTIVE' })
         });
         if (res.ok) fetchData('auth/operators', setUsers);

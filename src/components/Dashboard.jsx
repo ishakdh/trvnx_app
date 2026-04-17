@@ -6,7 +6,6 @@ const socket = io(`${import.meta.env.VITE_BASE_URL}`);
 
 const Dashboard = ({ user, onLogout }) => {
     const [devices, setDevices] = useState([]);
-    const [activeTab, setActiveTab] = useState('DEVICE_GRID');
 
     // Logic: Fetch real data from your backend
     const fetchDevices = async () => {

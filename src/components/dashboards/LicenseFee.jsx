@@ -206,7 +206,7 @@ const LicenseFee = ({ activeTab, setActiveTab, marketOptions }) => {
 
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/settings/license-fees/${feeId}/toggle-status`, {
-                method: 'PATCH',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({ status: newStatus })
             });

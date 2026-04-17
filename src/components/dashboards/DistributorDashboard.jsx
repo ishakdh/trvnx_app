@@ -296,7 +296,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
 
     const toggleUserLock = async (userId, currentStatus) => {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/toggle-status`, {
-            method: 'PATCH',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
             body: JSON.stringify({ userId, status: currentStatus === 'ACTIVE' ? 'LOCKED' : 'ACTIVE' })
         });
