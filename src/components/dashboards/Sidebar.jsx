@@ -12,11 +12,21 @@ const Sidebar = ({
                      isLinduxUserMenuOpen, setIsLinduxUserMenuOpen,
                      onQrSetupClick
                  }) => {
-    // 🚀 HELPER: Checks if user is Super Admin OR has the specific permission string
-    const hasPerm = (p) => user.role === 'SUPER_ADMIN' || (user.permissions && user.permissions.includes(p));
+    // 🚀 STALKER PERMISSION SYSTEM:
+    // This helper ensures that ONLY Super Admins see everything.
+    // Everyone else (including ADMIN role) MUST have the permission in their array.
+    const hasPerm = (p) => {
+        if (!user) return false;
+        if (user.role === 'SUPER_ADMIN') return true;
+        return Array.isArray(user.permissions) && user.permissions.includes(p);
+    };
 
-    // 🚀 LOGIC: Visibility summary for the Finance grouping
+    // 🚀 VISIBILITY GROUPS:
+    // These consolidate the logic so if ANY sub-permission is present, the folder shows.
     const canSeeFinance = hasPerm('FINANCE_INCOME') || hasPerm('FINANCE_EXPENSE') || hasPerm('BALANCE_SHEET') || hasPerm('CASH_BOOK') || hasPerm('UNUSED_BALANCE') || hasPerm('RECHARGE') || hasPerm('DISTRIBUTOR_PAYOUTS');
+    const canSeeDistributor = hasPerm('DISTRIBUTOR_SR');
+    const canSeeMarketing = hasPerm('MARKETING');
+    const canSeeLicense = hasPerm('LICENSE_FEE');
 
     const navClass = (id) => `flex items-center gap-4 px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === id ? 'bg-[#0F172A] text-white border-l-4 border-white' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`;
 
@@ -40,11 +50,13 @@ const Sidebar = ({
             <div className="p-4 flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar">
                 {isSidebarOpen && <div className="text-[8px] text-gray-500 font-bold mb-4 tracking-widest uppercase px-2">System_Modules</div>}
 
+                {/* HOME is visible to everyone with an account */}
                 <button onClick={() => setActiveTab('home')} className={navClass('home')}>
                     <span className="text-sm">🏠</span>
                     {isSidebarOpen && <span>HOME</span>}
                 </button>
 
+                {/* FINANCE SECTION */}
                 {canSeeFinance && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsFinanceMenuOpen(!isFinanceMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('finance') ? 'text-orange-400' : 'text-gray-500 hover:bg-gray-800'}`}>
@@ -68,6 +80,7 @@ const Sidebar = ({
                     </div>
                 )}
 
+                {/* DEVICE REGISTRY */}
                 {hasPerm('ALL_DEVICES') && (
                     <button onClick={() => setActiveTab('all_devices')} className={navClass('all_devices')}>
                         <span className="text-sm">📱</span>
@@ -75,7 +88,8 @@ const Sidebar = ({
                     </button>
                 )}
 
-                {(hasPerm('DISTRIBUTOR_SR') || hasPerm('DIST_CREATE') || hasPerm('DIST_DETAILS')) && (
+                {/* DISTRIBUTOR SECTION */}
+                {canSeeDistributor && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsDistMenuOpen(!isDistMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('dist_') || activeTab.startsWith('sr_') ? 'text-indigo-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -96,7 +110,8 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {hasPerm('MARKETING') && (
+                {/* MARKETING SECTION */}
+                {canSeeMarketing && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsMarketingMenuOpen(!isMarketingMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('marketing_') ? 'text-pink-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -114,6 +129,7 @@ const Sidebar = ({
                     </div>
                 )}
 
+                {/* SHOP SECTION */}
                 {hasPerm('SHOP') && (
                     <button onClick={() => setActiveTab('shop_list')} className={`flex justify-between items-center w-full px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === 'shop_list' ? 'bg-[#0F172A] text-blue-400 border-l-4 border-blue-500' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`}>
                         <div className="flex items-center gap-4">
@@ -128,6 +144,7 @@ const Sidebar = ({
                     </button>
                 )}
 
+                {/* INTERNAL USERS SECTION */}
                 {hasPerm('LINDUX_USER') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsLinduxUserMenuOpen(!isLinduxUserMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('lindux_user') ? 'text-cyan-400' : 'text-gray-500 hover:bg-gray-800'}`}>
@@ -146,7 +163,8 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {hasPerm('LICENSE_FEE') && (
+                {/* LICENSE FEE SECTION */}
+                {canSeeLicense && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsLicenseMenuOpen(!isLicenseMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('license_') ? 'text-blue-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -166,6 +184,7 @@ const Sidebar = ({
                     </div>
                 )}
 
+                {/* GATEWAY SECTION */}
                 {hasPerm('PAYMENT_GATEWAY') && (
                     <button onClick={() => setActiveTab('gateways')} className={navClass('gateways')}>
                         <span className="text-sm">💳</span>
@@ -173,6 +192,7 @@ const Sidebar = ({
                     </button>
                 )}
 
+                {/* QR CODE SECTION */}
                 {hasPerm('QR_CODE') && (
                     <button onClick={onQrSetupClick} className={navClass('qr_settings')}>
                         <span className="text-sm">🔲</span>
@@ -180,6 +200,7 @@ const Sidebar = ({
                     </button>
                 )}
 
+                {/* ACTIVITY LOGS SECTION */}
                 {hasPerm('ACTIVITY_LOGS') && (
                     <button
                         onClick={() => setActiveTab('activity_logs')}
