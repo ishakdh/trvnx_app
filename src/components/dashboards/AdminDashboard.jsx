@@ -187,26 +187,37 @@ const AdminDashboard = ({ user, onLogout }) => {
     const handleMirror = async (targetId) => {
         if (!window.confirm("⚠️ INITIATE MIRROR PROTOCOL? You will take full control of this identity.")) return;
         try {
-            // 🚀 FIXED: Pointing to /auth/shadow and using window.location.href for force-refresh
-            const res = await fetch(`${VITE_API_URL}/auth/shadow`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/shadow`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
+                },
                 body: JSON.stringify({ targetUserId: targetId })
             });
+
             if (res.ok) {
                 const data = await res.json();
+
+                // 1. Store the original admin identity so you can go back
                 localStorage.setItem('original_admin_token', localStorage.getItem('trvnx_token'));
                 localStorage.setItem('original_admin_user', localStorage.getItem('trvnx_user'));
+
+                // 2. Overwrite current identity with the mirrored user
                 localStorage.setItem('trvnx_token', data.token);
                 localStorage.setItem('trvnx_user', JSON.stringify(data.user));
 
-                // 🚀 FORCE RELOAD TO UPDATE PERMISSIONS/SIDEBAR INSTANTLY
-                window.location.href = '/dashboard';
+                // 3. 🚀 THE FIX: Use reload() instead of href='/dashboard'
+                // This prevents the Nginx 404 error and updates the Sidebar permissions instantly.
+                window.location.reload();
+
             } else {
                 const errData = await res.json();
-                alert(`❌ MIRROR PROTOCOL FAILED: ${errData.message || 'Identity locked.'}`);
+                alert(`❌ MIRROR PROTOCOL FAILED: ${errData.message || 'Target identity locked.'}`);
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."+err.toString()); }
+        } catch (err) {
+            alert("⚠️ SYSTEM OFFLINE. " + err.toString());
+        }
     };
 
     const handleChangePassword = async (e) => {
