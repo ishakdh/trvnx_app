@@ -26,6 +26,9 @@ const AdminDashboard = ({ user, onLogout }) => {
     // const [feeOverride, setFeeOverride] = useState({});
     // const [showRechargeModal, setShowRechargeModal] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
+    // 🚀 NEW: View and Edit Modal States
+    const [viewLinduxUserModal, setViewLinduxUserModal] = useState({ isOpen: false, user: null });
+    const [editLinduxUserModal, setEditLinduxUserModal] = useState({ isOpen: false, user: null });
 
     // 🚀 NEW: Lindux User Menu States & Data
     const [isLinduxUserMenuOpen, setIsLinduxUserMenuOpen] = useState(false);
@@ -36,7 +39,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     });
 
     // 🚀 ALL SYSTEM MODULES FOR PERMISSION CHECKLIST
-    const ALL_PERMISSIONS = ['HOME', 'FINANCE_INCOME', 'FINANCE_EXPENSE', 'BALANCE_SHEET', 'CASH_BOOK', 'UNUSED_BALANCE', 'RECHARGE', 'DISTRIBUTOR_PAYOUTS', 'ALL_DEVICES', 'DISTRIBUTOR_SR', 'MARKETING', 'SHOP', 'LICENSE_FEE', 'PAYMENT_GATEWAY', 'QR_CODE', 'ACTIVITY_LOGS'];
+    const ALL_PERMISSIONS = ['HOME', 'FINANCE_INCOME', 'FINANCE_EXPENSE', 'BALANCE_SHEET', 'CASH_BOOK', 'UNUSED_BALANCE', 'RECHARGE', 'DISTRIBUTOR_PAYOUTS', 'ALL_DEVICES', 'DISTRIBUTOR_SR', 'MARKETING', 'SHOP', 'LICENSE_FEE', 'PAYMENT_GATEWAY', 'QR_CODE', 'ACTIVITY_LOGS', 'LINDUX_USER'];
 
     const togglePermission = (perm) => {
         setLinduxUserForm(prev => ({
@@ -166,26 +169,29 @@ const AdminDashboard = ({ user, onLogout }) => {
     */
 
 
-    // 🚀 NEW: Create Lindux User Function
-    const handleCreateLinduxUser = async (e) => {
+    // 🚀 NEW: Update Lindux User Function
+    const handleUpdateLinduxUser = async (e) => {
         e.preventDefault();
-        const payload = {
-            name: linduxUserForm.name, phone: linduxUserForm.phone1, phone_alt: linduxUserForm.phone2,
-            password: linduxUserForm.password, father_name: linduxUserForm.fatherName, mother_name: linduxUserForm.motherName,
-            role: linduxUserForm.role, permissions: linduxUserForm.permissions, createdBy: user.id || user._id,
-            address: { line1: linduxUserForm.address1, line2: linduxUserForm.address2, division: linduxUserForm.division, district: linduxUserForm.district, thana: linduxUserForm.thana }
-        };
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+            const payload = {
+                userId: editLinduxUserModal.user._id,
+                name: editLinduxUserModal.user.name,
+                phone: editLinduxUserModal.user.phone,
+                role: editLinduxUserModal.user.role,
+                permissions: editLinduxUserModal.user.permissions
+            };
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/update-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
-                alert("✅ LINDUX USER CREATED.");
-                setLinduxUserForm({ name: '', password: '', fatherName: '', motherName: '', phone1: '', phone2: '', address1: '', address2: '', division: '', district: '', thana: '', role: 'ADMIN', permissions: [] });
+                alert("✅ USER IDENTITY UPDATED.");
+                setEditLinduxUserModal({ isOpen: false, user: null });
                 fetchData('auth/operators', setUsers);
-                setActiveTab('lindux_user_list');
-            } else { alert("❌ CREATION FAILED."); }
+            } else {
+                alert("❌ FAILED TO UPDATE USER.");
+            }
         } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
@@ -1019,6 +1025,8 @@ const AdminDashboard = ({ user, onLogout }) => {
                                             </td>
                                             <td className="p-5 text-right">
                                                 <div className="flex justify-end gap-2">
+                                                    <button onClick={() => setViewLinduxUserModal({ isOpen: true, user: u })} className="bg-blue-900/40 border border-blue-900/50 text-blue-400 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded text-[8px] transition-all font-black uppercase">VIEW</button>
+                                                    <button onClick={() => setEditLinduxUserModal({ isOpen: true, user: u })} className="bg-yellow-900/40 border border-yellow-900/50 text-yellow-400 hover:bg-yellow-600 hover:text-white px-3 py-1.5 rounded text-[8px] transition-all font-black uppercase">EDIT</button>
                                                     <button onClick={() => handleMirror(u._id)} className="bg-purple-900/40 border border-purple-900/50 text-purple-400 hover:bg-purple-600 hover:text-white px-3 py-1.5 rounded text-[8px] transition-all font-black uppercase">MIRROR</button>
                                                     <button onClick={() => toggleUserLock(u._id, u.status || 'ACTIVE')} className={`px-4 py-1.5 rounded text-[8px] font-black tracking-widest transition-all ${u.status === 'LOCKED' ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg' : 'bg-red-900/40 text-red-500 border border-red-900/50 hover:bg-red-600 hover:text-white'}`}>
                                                         {u.status === 'LOCKED' ? 'UNLOCK_ID' : 'LOCK_ID'}
@@ -1035,7 +1043,78 @@ const AdminDashboard = ({ user, onLogout }) => {
                             </div>
                         </div>
                     )}
+                    {/* 🚀 NEW: VIEW LINDUX USER MODAL */}
+                    {viewLinduxUserModal.isOpen && viewLinduxUserModal.user && (
+                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[500] p-4">
+                            <div className="bg-[#111A35] border border-cyan-900/50 p-6 rounded-lg w-full max-w-2xl shadow-2xl">
+                                <div className="flex justify-between items-center mb-6 border-b border-[#273A60] pb-3">
+                                    <h3 className="text-cyan-400 text-lg uppercase tracking-widest font-black">User Dossier</h3>
+                                    <button onClick={() => setViewLinduxUserModal({ isOpen: false, user: null })} className="text-gray-500 hover:text-red-400 text-xl font-black">✕</button>
+                                </div>
+                                <div className="space-y-4 text-xs font-bold text-gray-300">
+                                    <p><span className="text-cyan-500">ID:</span> {viewLinduxUserModal.user._id}</p>
+                                    <p><span className="text-cyan-500">NAME:</span> {viewLinduxUserModal.user.name}</p>
+                                    <p><span className="text-cyan-500">PHONE:</span> {viewLinduxUserModal.user.phone}</p>
+                                    <p><span className="text-cyan-500">ROLE:</span> <span className="text-red-400">{viewLinduxUserModal.user.role}</span></p>
+                                    <p><span className="text-cyan-500">PERMISSIONS:</span> {viewLinduxUserModal.user.permissions?.join(', ') || 'Global Default'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
+                    {/* 🚀 NEW: EDIT LINDUX USER MODAL */}
+                    {editLinduxUserModal.isOpen && editLinduxUserModal.user && (
+                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[500] p-4">
+                            <div className="bg-[#111A35] border border-yellow-900/50 p-6 rounded-lg w-full max-w-2xl shadow-2xl">
+                                <div className="flex justify-between items-center mb-6 border-b border-[#273A60] pb-3">
+                                    <h3 className="text-yellow-400 text-lg uppercase tracking-widest font-black">Edit User Identity</h3>
+                                    <button onClick={() => setEditLinduxUserModal({ isOpen: false, user: null })} className="text-gray-500 hover:text-red-400 text-xl font-black">✕</button>
+                                </div>
+                                <form onSubmit={handleUpdateLinduxUser} className="space-y-4 text-[10px]">
+                                    <div>
+                                        <label className="text-gray-500 tracking-widest mb-1 block">NAME</label>
+                                        <input type="text" value={editLinduxUserModal.user.name} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, name: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-white outline-none rounded" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-gray-500 tracking-widest mb-1 block">PHONE</label>
+                                            <input type="text" value={editLinduxUserModal.user.phone} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, phone: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-cyan-500 outline-none rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="text-gray-500 tracking-widest mb-1 block">ROLE</label>
+                                            <select value={editLinduxUserModal.user.role} onChange={e => setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, role: e.target.value}})} className="w-full bg-[#050A15] border border-[#273A60] p-2 text-red-400 outline-none rounded">
+                                                <option value="ADMIN">ADMIN</option>
+                                                <option value="ACCOUNTS">ACCOUNTS</option>
+                                                <option value="MARKETING">MARKETING</option>
+                                                <option value="CALL_CENTER">CALL CENTER</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 mt-4 border-t border-[#273A60]">
+                                        <p className="text-cyan-500 tracking-widest mb-4">MENU PERMISSION MATRIX</p>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-[#050A15] p-4 rounded border border-[#273A60]">
+                                            {ALL_PERMISSIONS.map(perm => (
+                                                <label key={perm} className="flex items-center gap-3 text-gray-300 cursor-pointer hover:text-cyan-400">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editLinduxUserModal.user.permissions?.includes(perm) || false}
+                                                        onChange={() => {
+                                                            const currentPerms = editLinduxUserModal.user.permissions || [];
+                                                            const newPerms = currentPerms.includes(perm) ? currentPerms.filter(p => p !== perm) : [...currentPerms, perm];
+                                                            setEditLinduxUserModal({...editLinduxUserModal, user: {...editLinduxUserModal.user, permissions: newPerms}});
+                                                        }}
+                                                        className="w-4 h-4 accent-yellow-500"
+                                                    />
+                                                    {perm.replace('_', ' ')}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <button type="submit" className="w-full bg-yellow-600 hover:bg-yellow-500 text-white py-3 rounded text-[11px] tracking-widest shadow-lg mt-4 transition-all">COMMIT CHANGES</button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                     {activeTab === 'home' && <HomeDashboard user={user} allDevices={allDevices} financeLedger={financeLedger} marketingTargets={marketingTargets} />}
 
                     {activeTab.startsWith('license_') && (
