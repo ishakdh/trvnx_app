@@ -313,11 +313,15 @@ const AdminDashboard = ({ user, onLogout }) => {
             return acc;
         }, []).sort() : [];
 
-    const editTargetAvailableThanas = (editTargetModal.target && Array.isArray(editTargetModal.target.districts) && editTargetModal.target.districts.length > 0 && BD_DATA)
+    /*
+    const editTargetAvailableThanks = (editTargetModal.target && Array.isArray(editTargetModal.target.districts) && editTargetModal.target.districts.length > 0 && BD_DATA)
         ? editTargetModal.target.districts.reduce((acc, dist) => {
             for (const div in BD_DATA) { if (BD_DATA[div][dist]) return acc.concat(BD_DATA[div][dist]); }
             return acc;
         }, []).sort() : [];
+
+        */
+
 
     const handleCreateTarget = async (e) => {
         e.preventDefault();
