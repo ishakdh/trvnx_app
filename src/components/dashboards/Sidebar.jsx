@@ -12,10 +12,19 @@ const Sidebar = ({
                      isLinduxUserMenuOpen, setIsLinduxUserMenuOpen, // 🚀 NEW: State for Lindux User Menu
                      onQrSetupClick // 🚀 ADDED: Prop to trigger the QR Modal in AdminDashboard
                  }) => {
-    const canSeeFinance = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTS'].includes(user.role);
-    const canSeeRegistry = ['SUPER_ADMIN', 'ADMIN', 'MARKETING', 'CALL_CENTER'].includes(user.role);
-    const canSeeSettings = ['SUPER_ADMIN', 'ADMIN'].includes(user.role);
+    const hasPerm = (p) => {
+        if (!user) return false;
+        if (user.role === 'SUPER_ADMIN') return true; // Super Admin sob dekhte pabe
+        const permissions = Array.isArray(user.permissions) ? user.permissions : [];
+        return permissions.includes(p); // Baki shobai permission array theke check hobe
+    };
 
+// --- Step B: Visibility Logic (Replace your old canSee variables) ---
+    // --- Step B: Visibility Logic ---
+    const canSeeFinance = hasPerm('FINANCE_INCOME') || hasPerm('FINANCE_EXPENSE') || hasPerm('BALANCE_SHEET') || hasPerm('CASH_BOOK') || hasPerm('UNUSED_BALANCE') || hasPerm('RECHARGE') || hasPerm('DISTRIBUTOR_PAYOUTS');
+
+// --- Step C: Individual Button Protection (Optional but Recommended) ---
+    
     const navClass = (id) => `flex items-center gap-4 px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === id ? 'bg-[#0F172A] text-white border-l-4 border-white' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`;
 
     return (
@@ -66,14 +75,14 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeRegistry && (
+                {hasPerm('ALL_DEVICES') && (
                     <button onClick={() => setActiveTab('all_devices')} className={navClass('all_devices')}>
                         <span className="text-sm">📱</span>
                         {isSidebarOpen && <span>ALL_DEVICES</span>}
                     </button>
                 )}
 
-                {canSeeRegistry && (
+                {hasPerm('DISTRIBUTOR_SR') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsDistMenuOpen(!isDistMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('dist_') || activeTab.startsWith('sr_') ? 'text-indigo-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -94,7 +103,7 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeRegistry && (
+                {hasPerm('MARKETING') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsMarketingMenuOpen(!isMarketingMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('marketing_') ? 'text-pink-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -112,7 +121,7 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeRegistry && (
+                {hasPerm('SHOP') && (
                     <button onClick={() => setActiveTab('shop_list')} className={`flex justify-between items-center w-full px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === 'shop_list' ? 'bg-[#0F172A] text-blue-400 border-l-4 border-blue-500' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`}>
                         <div className="flex items-center gap-4">
                             <span className="text-sm">🛒</span>
@@ -127,7 +136,7 @@ const Sidebar = ({
                 )}
 
                 {/* 🚀 NEW: Lindux User Menu */}
-                {canSeeSettings && (
+                {hasPerm('LINDUX_USER') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsLinduxUserMenuOpen(!isLinduxUserMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('lindux_user') ? 'text-cyan-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -145,7 +154,7 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeSettings && (
+                {hasPerm('LICENSE_FEE') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsLicenseMenuOpen(!isLicenseMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('license_') ? 'text-blue-400' : 'text-gray-500 hover:bg-gray-800'}`}>
                             <div className="flex items-center gap-4">
@@ -165,27 +174,28 @@ const Sidebar = ({
                     </div>
                 )}
 
-                {canSeeSettings && (
-                    <>
-                        <button onClick={() => setActiveTab('gateways')} className={navClass('gateways')}>
-                            <span className="text-sm">💳</span>
-                            {isSidebarOpen && <span>PAYMENT_GATEWAY</span>}
-                        </button>
-
-                        {/* 🚀 FIXED: QR Code Button triggers modal via props */}
-                        <button onClick={onQrSetupClick} className={navClass('qr_settings')}>
-                            <span className="text-sm">🔲</span>
-                            {isSidebarOpen && <span>QR CODE</span>}
-                        </button>
-                    </>
+                {hasPerm('PAYMENT_GATEWAY') && (
+                    <button onClick={() => setActiveTab('gateways')} className={navClass('gateways')}>
+                        <span className="text-sm">💳</span>
+                        {isSidebarOpen && <span>PAYMENT_GATEWAY</span>}
+                    </button>
                 )}
-                <button
-                    onClick={() => setActiveTab('activity_logs')}
-                    className={`w-full text-left px-4 py-3 rounded text-[10px] font-black transition-all border-l-4 
-        ${activeTab === 'activity_logs' ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg' : 'border-transparent text-gray-500 hover:bg-[#111A35] hover:text-gray-300'}`}
-                >
-                    📜 ACTIVITY LOGS
-                </button>
+
+                {hasPerm('QR_CODE') && (
+                    <button onClick={onQrSetupClick} className={navClass('qr_settings')}>
+                        <span className="text-sm">🔲</span>
+                        {isSidebarOpen && <span>QR CODE</span>}
+                    </button>
+                )}
+                {hasPerm('ACTIVITY_LOGS') && (
+                    <button
+                        onClick={() => setActiveTab('activity_logs')}
+                        className={`w-full text-left px-4 py-3 rounded text-[10px] font-black transition-all border-l-4 
+    ${activeTab === 'activity_logs' ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg' : 'border-transparent text-gray-500 hover:bg-[#111A35] hover:text-gray-300'}`}
+                    >
+                        📜 ACTIVITY LOGS
+                    </button>
+                )}
 
                 <div className="mt-auto pt-8 pb-4 flex flex-col gap-2">
                     <button onClick={onPasswordClick} className="w-full text-gray-500 hover:text-white px-4 py-3 rounded text-[10px] font-bold text-left hover:bg-gray-800 transition-all uppercase tracking-widest flex items-center gap-4">
