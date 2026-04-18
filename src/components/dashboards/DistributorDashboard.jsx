@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BD_DATA } from '../../utils/bd_geo.js';
-import MultiSelectDropdown from "./admin/MultiSelectDropdown.jsx";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const MONTHS = [
@@ -136,8 +135,15 @@ const DistributorDashboard = ({ user, onLogout }) => {
         } catch (error) { console.error("EXTENDED_SYNC_FAILED", error); }
     };
 
-    useEffect(() => { fetchMyNetwork(); }, [user]);
-    useEffect(() => { if (!loading) fetchExtendedData(); }, [loading, activeTab, mySRs]);
+    useEffect(() => {
+        const init = async () => await fetchMyNetwork();
+        init();
+    }, [user]);
+
+    useEffect(() => {
+        const extended = async () => { if (!loading) await fetchExtendedData(); };
+        extended();
+    }, [loading, activeTab, mySRs]);
 
     // 🚀 NEW: Auto-Generate Target Name & Date Range whenever Month, Year, or SR changes
     useEffect(() => {
@@ -1479,7 +1485,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                                         max={calculatedBalance}
                                         required
                                         value={payoutModal.amount}
-                                        onChange={e => setPayoutModal({...payoutModal, amount: e.target.value})}
+                                        onChange={e => setPayoutModal({...payoutModal, amount: Number(e.target.value)})}
                                         className="w-full bg-black border border-[#273A60] p-3 text-green-400 font-mono font-black"
                                     />
                                 </div>
