@@ -16,9 +16,7 @@ const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + i);
 const DistributorDashboard = ({ user, onLogout }) => {
     const [mySRs, setMySRs] = useState([]);
     const [myShops, setMyShops] = useState([]);
-    const [srLiabilities, setSrLiabilities] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [commissionBalance, setCommissionBalance] = useState(user.balance || 0);
 
     const [activeTab, setActiveTab] = useState('home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -45,7 +43,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
     });
 
     const [targetSearchTerm, setTargetSearchTerm] = useState('');
-    const [targetFilterName, setTargetFilterName] = useState('');
+    const [targetFilterName] = useState('');
     const [targetFilterStart, setTargetFilterStart] = useState('');
     const [targetFilterEnd, setTargetFilterEnd] = useState('');
     const [currentTargetPage, setCurrentTargetPage] = useState(1);
@@ -83,18 +81,12 @@ const DistributorDashboard = ({ user, onLogout }) => {
             const data = await response.json();
             const allUsers = Array.isArray(data) ? data : (data.users || data.data || []);
 
-            const myLiveProfile = allUsers.find(u => String(u._id) === myIdStr);
-            if (myLiveProfile) setCommissionBalance(myLiveProfile.balance || 0);
-
             const filteredSRs = allUsers.filter(op => op.role === 'SR' && (String(op.parent_id) === myIdStr || String(op.createdBy) === myIdStr));
             setMySRs(filteredSRs);
             const srIds = filteredSRs.map(sr => String(sr._id));
 
             const filteredShops = allUsers.filter(op => op.role === 'SHOPKEEPER' && (String(op.parent_id) === myIdStr || String(op.createdBy) === myIdStr || srIds.includes(String(op.parent_id))));
             setMyShops(filteredShops);
-
-            const liabilities = filteredSRs.filter(sr => sr.balance > 0).map(sr => ({ id: sr._id, name: sr.name, phone: sr.phone, amount_owed: sr.balance }));
-            setSrLiabilities(liabilities);
         } catch (err) { console.error("NETWORK_SYNC_FAILED:", err); }
         finally { setLoading(false); }
     };
@@ -148,7 +140,6 @@ const DistributorDashboard = ({ user, onLogout }) => {
 
     // 🚀 NEW: Auto-Generate Target Name & Date Range whenever Month, Year, or SR changes
     useEffect(() => {
-        const start = new Date(targetYear, targetMonth, 1);
         const end = new Date(targetYear, targetMonth + 1, 0);
 
         const startStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`;
@@ -186,7 +177,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
             } else {
                 alert("❌ ACTION FAILED.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const handleChangePassword = async (e) => {
@@ -207,9 +198,10 @@ const DistributorDashboard = ({ user, onLogout }) => {
             } else {
                 alert("❌ FAILED TO UPDATE PASSWORD.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFLINE."); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFLINE."); }
     };
 
+    // eslint-disable-next-line no-unused-vars
     const handleReleaseSubmit = async (e) => {
         e.preventDefault();
         if (calculatedBalance < releaseModal.amount) return alert("❌ INSUFFICIENT BALANCE: You do not have enough funds to clear this liability.");
@@ -247,7 +239,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 const err = await res.json();
                 alert(`❌ RELEASE FAILED: ${err.message}`);
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const handleRejectPayment = async (requestId) => {
@@ -265,7 +257,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
             } else {
                 alert("❌ REJECT FAILED.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const handleCreateSR = async (e) => {
@@ -291,7 +283,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 fetchMyNetwork();
                 setActiveTab('sr_details');
             } else alert("❌ SR CREATION FAILED.");
-        } catch (error) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (error) { console.error(error); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const toggleUserLock = async (userId, currentStatus) => {
@@ -386,7 +378,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
     };
 
     const { sliced: srList, max: srMax, filtered: srAll } = paginate(mySRs, 'srDetails');
-    const { sliced: srAcList, max: srAcMax, filtered: srAcAll } = paginate(srTransactions, 'srAc');
+    const { sliced: srAcList } = paginate(srTransactions, 'srAc');
     const { sliced: incomeList, max: incomeMax, filtered: incomeAll } = paginate(financeLedger.filter(tx => tx.type === 'COMMISSION'), 'income');
 
     const calculatedBalance = incomeAll.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
@@ -394,6 +386,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
     const isEndOfMonth = today.getDate() === new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const canRequestPayout = calculatedBalance >= 10000 || isEndOfMonth;
 
+    // 🚀 FIXED FOR MIRROR MODE: Added targetUserId
     const handleRequestPayoutSubmit = async (e) => {
         e.preventDefault();
         const requestAmount = Number(payoutModal.amount);
@@ -402,18 +395,26 @@ const DistributorDashboard = ({ user, onLogout }) => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/request-payout`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({ amount: requestAmount })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
+                },
+                // 🚀 THE KEY: Sending the ID of the user being mirrored
+                body: JSON.stringify({
+                    amount: requestAmount,
+                    targetUserId: user.id || user._id
+                })
             });
             if (res.ok) {
-                alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from your wallet.`);
+                alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from the wallet.`);
                 setPayoutModal({ isOpen: false, amount: 0 });
                 fetchMyNetwork();
                 fetchExtendedData();
             } else {
-                alert("❌ Request denied.");
+                const err = await res.json();
+                alert(`❌ Request denied: ${err.message || "Unauthorized"}`);
             }
-        } catch (err) { alert("⚠️ SYSTEM_OFFLINE"); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM_OFFLINE"); }
     };
 
     const { sliced: balanceList, max: balanceMax, filtered: balanceAll } = paginate(financeLedger, 'balance');
@@ -868,7 +869,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                                         <tr><th className="p-4">Date</th><th className="p-4">SR Name</th><th className="p-4 text-right">Requested Amount</th><th className="p-4 text-right">Payout Status</th></tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#162447]">
-                                        {srPayoutRequests.map((req, idx) => (
+                                        {srPayoutRequests.map((req) => (
                                             <tr key={req._id} className="hover:bg-orange-900/5 transition-colors">
                                                 <td className="p-4 text-gray-400">{new Date(req.createdAt).toLocaleDateString()}</td>
                                                 <td className="p-4 text-white">
@@ -978,7 +979,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                                         <tr><th className="p-4">Date</th><th className="p-4">Description</th><th className="p-4 text-right">Requested Amount</th><th className="p-4 text-right">Status</th></tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#162447]">
-                                        {financeLedger.filter(tx => tx.type === 'PAYOUT_REQUEST').map((tx, idx) => (
+                                        {financeLedger.filter(tx => tx.type === 'PAYOUT_REQUEST').map((tx) => (
                                             <tr key={tx._id} className="hover:bg-gray-900/50 transition-colors">
                                                 <td className="p-4 text-gray-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
                                                 <td className="p-4 text-gray-300 italic">{tx.remarks || 'Payout Request'}</td>
@@ -1226,8 +1227,8 @@ const DistributorDashboard = ({ user, onLogout }) => {
                                 </div>
                                 <div className="text-[9px] font-bold text-gray-500 flex gap-4 pr-4 uppercase tracking-widest">
                                     <button onClick={() => setCurrentTargetPage(prev => Math.max(prev - 1, 1))} className="hover:text-white transition-colors">◀ PREV</button>
-                                    <span>PAGE {currentTargetPage} OF {Math.ceil(calculatedMarketingTargets.length / TARGETS_PER_PAGE) || 1}</span>
-                                    <button onClick={() => setCurrentTargetPage(prev => Math.min(prev + 1, Math.ceil(calculatedMarketingTargets.length / TARGETS_PER_PAGE) || 1))} className="hover:text-white transition-colors">NEXT ▶</button>
+                                    <span>PAGE {currentTargetPage} OF {Math.ceil(filteredMarketingTargets.length / TARGETS_PER_PAGE) || 1}</span>
+                                    <button onClick={() => setCurrentTargetPage(prev => Math.min(prev + 1, Math.ceil(filteredMarketingTargets.length / TARGETS_PER_PAGE) || 1))} className="hover:text-white transition-colors">NEXT ▶</button>
                                 </div>
                             </div>
 

@@ -7,7 +7,7 @@ import { BD_DATA } from '../../utils/bd_geo.js';
 const SRDashboard = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState('home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [, setLoading] = useState(false);
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
@@ -25,10 +25,7 @@ const SRDashboard = ({ user, onLogout }) => {
     const [currentTargetPage, setCurrentTargetPage] = useState(1);
     const TARGETS_PER_PAGE = 50;
 
-    // 🚀 NEW: Home Graph Filter State
     const [homeGraphFilter, setHomeGraphFilter] = useState('THIS_MONTH');
-    const [timeFilter, setTimeFilter] = useState('ALL');
-    const [monthFilter, setMonthFilter] = useState('ALL');
 
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -46,15 +43,13 @@ const SRDashboard = ({ user, onLogout }) => {
 
     const [files, setFiles] = useState({ photo: null, nid: null, trade_license: null });
 
-    // 🚀 NEW STATE: Payout Request Modal
     const [payoutModal, setPayoutModal] = useState({ isOpen: false, amount: 0 });
 
     const allDivisions = Object.keys(BD_DATA);
     const availableDistricts = shopForm.division ? Object.keys(BD_DATA[shopForm.division]) : [];
     let availableThanas = [];
     if (shopForm.division && shopForm.district && BD_DATA[shopForm.division][shopForm.district]) {
-        availableThanas = [...BD_DATA[shopForm.division][shopForm.district]];
-        availableThanas.sort();
+        availableThanas = [...BD_DATA[shopForm.division][shopForm.district]].sort();
     }
 
     const myIdStr = String(user.id || user._id);
@@ -138,7 +133,7 @@ const SRDashboard = ({ user, onLogout }) => {
                 const err = await response.json();
                 alert(`❌ DEPLOYMENT FAILED: ${err.message}`);
             }
-        } catch (err) { alert("⚠️ SYSTEM_OFFLINE"); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM_OFFLINE"); }
     };
 
     const handleChangePassword = async (e) => {
@@ -159,17 +154,15 @@ const SRDashboard = ({ user, onLogout }) => {
             } else {
                 alert("❌ FAILED TO UPDATE PASSWORD.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const handleFileChange = (e, type) => { setFiles({ ...files, [type]: e.target.files[0] }); };
 
-    // 🚀 NEW: Dynamic Threshold Logic (5000 OR End of Month)
     const today = new Date();
     const isEndOfMonth = today.getDate() === new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const canRequestPayout = srBalance >= 5000 || isEndOfMonth;
 
-    // 🚀 NEW: Submit Payout Request with specific amount
     const handleRequestPayoutSubmit = async (e) => {
         e.preventDefault();
         const requestAmount = Number(payoutModal.amount);
@@ -178,17 +171,24 @@ const SRDashboard = ({ user, onLogout }) => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/sr-request-payout`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({ amount: requestAmount })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
+                },
+                body: JSON.stringify({
+                    amount: requestAmount,
+                    targetUserId: user.id || user._id
+                })
             });
             if (res.ok) {
-                alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from your wallet. Your Distributor has been notified.`);
+                alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from the wallet.`);
                 setPayoutModal({ isOpen: false, amount: 0 });
-                fetchData(); // Sync live balance
+                fetchData();
             } else {
-                alert("❌ Request denied.");
+                const err = await res.json();
+                alert(`❌ Request denied: ${err.message || "Unauthorized"}`);
             }
-        } catch (err) { alert("⚠️ SYSTEM_OFFLINE"); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM_OFFLINE"); }
     };
 
     const filterByDate = (items, dateField = 'createdAt') => items.filter(item => {
@@ -196,7 +196,7 @@ const SRDashboard = ({ user, onLogout }) => {
         const itemDate = new Date(item[dateField] || item.date).setHours(0,0,0,0);
         const s = startDate ? new Date(startDate).setHours(0,0,0,0) : null;
         const e = endDate ? new Date(endDate).setHours(23,59,59,999) : null;
-        if (s && e) return itemDate >= s && itemDate <= end;
+        if (s && e) return itemDate >= s && itemDate <= e;
         if (s) return itemDate >= s;
         if (e) return itemDate <= e;
         return true;
@@ -240,7 +240,6 @@ const SRDashboard = ({ user, onLogout }) => {
         return match;
     });
 
-    // 🚀 FIXED: Strict Unit Calculator (Ignores Price completely)
     const calculatedMarketingTargets = filteredMarketingTargets.map(t => {
         let idCount = 0;
         let licCount = 0;
@@ -279,7 +278,6 @@ const SRDashboard = ({ user, onLogout }) => {
         { name: 'No Data', Target: 0, Achievement: 0 }
     ];
 
-    // 🚀 UPDATED: Home Graph Calculation Logic strictly tracking Units and matching the filter state
     const homeFilteredTargets = marketingTargets.filter(t => {
         if (!t.start_date) return true;
         const targetDate = new Date(t.start_date);
@@ -327,36 +325,6 @@ const SRDashboard = ({ user, onLogout }) => {
     }) : [{ name: 'No Data', Target: 0, Achievement: 0 }];
 
     const homeTotalAchievePct = homeTotalTargetAmt > 0 ? ((homeTotalSalesAmt / homeTotalTargetAmt) * 100).toFixed(2) : 0;
-
-    // 🚀 FIXED: Sent properly formatted mapping so backend doesn't drop license_target
-    const handleCreateTarget = async (e) => {
-        e.preventDefault();
-        try {
-            const payload = {
-                ...targetForm,
-                target_name: targetForm.name,
-                start_date: targetForm.startDate,
-                end_date: targetForm.endDate,
-                id_target: Number(targetForm.idTarget) || 0,
-                target_amount: Number(targetForm.idTarget) || 0,
-                license_target: Number(targetForm.licenseTarget) || 0,
-                bonus_amount: Number(targetForm.bonus) || 0,
-                created_by: myIdStr,
-                target_level: 'SR'
-            };
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/marketing/create-target`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-                alert("✅ SR MARKETING TARGET DEPLOYED.");
-                setTargetForm({ name: '', startDate: '', endDate: '', markets: [], idTarget: '', licenseTarget: '', bonus: '' });
-                fetchExtendedData();
-                setActiveTab('marketing_targets');
-            } else { alert("Failed to deploy target."); }
-        } catch (err) { console.error(err); }
-    };
 
     return (
         <div className="min-h-screen bg-[#050A15] text-white font-mono flex relative overflow-hidden uppercase font-bold">
@@ -732,7 +700,7 @@ const SRDashboard = ({ user, onLogout }) => {
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-[9px] font-bold whitespace-nowrap uppercase">
-                                        <thead className="bg-[#050A15] text-gray-500 tracking-widest">
+                                        <thead className="bg-[#050A15] text-gray-500 tracking-widest font-bold">
                                         <tr>
                                             <th className="p-5">Target Name</th>
                                             <th className="p-5 text-center text-blue-400">ID Target</th>
@@ -744,7 +712,6 @@ const SRDashboard = ({ user, onLogout }) => {
                                         </thead>
                                         <tbody className="divide-y divide-[#162447]">
                                         {paginatedMarketingTargets.map((t) => {
-                                            // 🚀 FIXED: Ignore target_amount so it doesn't show 300,000
                                             const idTarget = Number(t.id_target || t.idTarget || 0);
                                             const idAchieved = Number(t.dynamic_id_achieved || 0);
                                             const idPct = idTarget > 0 ? ((idAchieved / idTarget) * 100).toFixed(1) : 0;
@@ -802,7 +769,6 @@ const SRDashboard = ({ user, onLogout }) => {
                                     {paginatedShops.map((shop) => {
                                         let statusColor = "text-green-500";
                                         let statusText = shop.approval?.status || "APPROVED";
-                                        let isClickable = false;
 
                                         if (statusText === 'WAITING_DISTRIBUTOR') {
                                             const hoursPassed = Math.abs(new Date() - new Date(shop.approval?.requested_at || shop.createdAt)) / 36e5;
