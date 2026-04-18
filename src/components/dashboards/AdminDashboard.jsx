@@ -27,6 +27,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     const [currentFallbackDate] = useState(() => Date.now());
 
     const [viewLinduxUserModal, setViewLinduxUserModal] = useState({ isOpen: false, user: null });
+    const [payoutProcessingModal, setPayoutProcessingModal] = useState({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
     const [editLinduxUserModal, setEditLinduxUserModal] = useState({ isOpen: false, user: null });
     const [isLinduxUserMenuOpen, setIsLinduxUserMenuOpen] = useState(false);
 
@@ -449,25 +450,55 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (err) { console.error(err); }
     };
 
+    // 🚀 FIXED: handleApprovePayout now closes the modal
     const handleApprovePayout = async (txId) => {
         try {
             const res = await fetch(`${VITE_API_URL}/transactions/approve-payout`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({ transactionId: txId })
             });
-            if (res.ok) { alert("✅ PAYOUT APPROVED. Sent to Accounts Queue."); fetchData('admin/finance-ledger', setFinanceLedger); }
+            if (res.ok) {
+                alert("✅ PAYOUT APPROVED. Sent to Accounts Queue.");
+                setPayoutProcessingModal({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
+                fetchData('admin/finance-ledger', setFinanceLedger);
+            }
         } catch (err) { console.error(err); }
     };
 
-    const handleReleasePayout = async (txId) => {
+    // 🚀 FIXED: handleReleasePayout and handleRejectPayout are now separate and top-level
+    const handleReleasePayout = async (txId_manual) => {
         try {
             const res = await fetch(`${VITE_API_URL}/transactions/release-payout`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({ transactionId: txId })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                body: JSON.stringify({
+                    transactionId: payoutProcessingModal.req._id,
+                    txId: txId_manual
+                })
             });
             if (res.ok) {
                 const data = await res.json();
-                alert(`✅ FUNDS RELEASED. Digital Slip Generated: ${data.slip?.id}`);
+                alert(`✅ FUNDS RELEASED. Slip Generated: ${data.slip?.id}`);
+                setPayoutProcessingModal({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
+                fetchData('admin/finance-ledger', setFinanceLedger);
+            }
+        } catch (err) { alert("Error releasing payout."); }
+    };
+
+    const handleRejectPayout = async () => {
+        if (!payoutProcessingModal.reason) return alert("Please enter a rejection reason.");
+        try {
+            const res = await fetch(`${VITE_API_URL}/transactions/reject-sr-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                body: JSON.stringify({
+                    requestId: payoutProcessingModal.req._id,
+                    reason: payoutProcessingModal.reason
+                })
+            });
+            if (res.ok) {
+                alert("❌ PAYOUT REJECTED & FUNDS REFUNDED.");
+                setPayoutProcessingModal({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
                 fetchData('admin/finance-ledger', setFinanceLedger);
             }
         } catch (err) { console.error(err); }
@@ -1205,6 +1236,9 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                     {(activeTab.startsWith('finance') || activeTab.startsWith('entry_')) && (
                         <Finance
+                            payoutProcessingModal={payoutProcessingModal}
+                            setPayoutProcessingModal={setPayoutProcessingModal}
+                            handleRejectAction={handleRejectPayout}
                             users={validUsers}
                             bonusForm={bonusForm}
                             setBonusForm={setBonusForm}
@@ -1447,6 +1481,71 @@ const AdminDashboard = ({ user, onLogout }) => {
                         </div>
                     )}
                 </div>
+                {payoutProcessingModal.isOpen && payoutProcessingModal.req && (
+                    <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[500] font-mono uppercase">
+                        <div className="bg-[#111A35] border border-blue-500/30 rounded-xl w-full max-w-md p-8 shadow-2xl relative font-bold">
+                            <button onClick={() => setPayoutProcessingModal({isOpen: false, req: null})} className="absolute top-4 right-4 text-gray-500 hover:text-red-500 font-black">✕</button>
+                            <h3 className="text-lg text-white mb-6 border-b border-[#273A60] pb-4">PAYOUT PROCESSING</h3>
+
+                            {payoutProcessingModal.step === 'VIEW' && (
+                                <div className="space-y-4">
+                                    <div className="bg-[#050A15] p-4 rounded border border-[#273A60] text-[10px]">
+                                        <p className="text-gray-500">REQUESTER: <span className="text-white">{payoutProcessingModal.req.userId?.name}</span></p>
+                                        <p className="text-gray-500 mt-2">AMOUNT: <span className="text-green-400 text-lg">৳{payoutProcessingModal.req.amount}</span></p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'APPROVE'})} className="flex-1 bg-green-600 py-3 rounded text-[10px]">APPROVE</button>
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'REJECT'})} className="flex-1 bg-red-900/40 border border-red-500 text-red-500 py-3 rounded text-[10px]">REJECT</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {payoutProcessingModal.step === 'APPROVE' && (
+                                <div className="space-y-4">
+                                    <label className="text-[9px] text-gray-500">PASTE BANK/MFS TRANSACTION ID</label>
+                                    <input
+                                        type="text"
+                                        value={payoutProcessingModal.txId}
+                                        onChange={e => setPayoutProcessingModal({...payoutProcessingModal, txId: e.target.value})}
+                                        className="w-full bg-black border border-[#273A60] p-3 text-green-400 outline-none rounded"
+                                        placeholder="Enter TxID..."
+                                    />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'VIEW'})} className="px-4 bg-gray-800 rounded text-[10px]">BACK</button>
+
+                                        {/* 🚀 PLACE THE SMART BUTTON HERE (Replace the old one) */}
+                                        <button
+                                            onClick={() => {
+                                                if (payoutProcessingModal.req.status === 'PENDING_ADMIN') {
+                                                    handleApprovePayout(payoutProcessingModal.req._id);
+                                                } else {
+                                                    handleReleasePayout(payoutProcessingModal.txId);
+                                                }
+                                            }}
+                                            disabled={payoutProcessingModal.req.status === 'PENDING_ACCOUNTS' && !payoutProcessingModal.txId}
+                                            className="flex-1 bg-green-600 py-3 rounded text-[10px]"
+                                        >
+                                            {payoutProcessingModal.req.status === 'PENDING_ADMIN' ? 'CONFIRM APPROVAL' : 'CONFIRM & RELEASE'}
+                                        </button>
+                                        {/* 🚀 END OF SMART BUTTON */}
+
+                                    </div>
+                                </div>
+                            )}
+
+                            {payoutProcessingModal.step === 'REJECT' && (
+                                <div className="space-y-4">
+                                    <label className="text-[9px] text-gray-500">REJECTION REASON</label>
+                                    <textarea value={payoutProcessingModal.reason} onChange={e => setPayoutProcessingModal({...payoutProcessingModal, reason: e.target.value})} className="w-full bg-black border border-[#273A60] p-3 text-red-400 outline-none rounded h-24" placeholder="Enter reason..." />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'VIEW'})} className="px-4 bg-gray-800 rounded text-[10px]">BACK</button>
+                                        <button onClick={handleRejectPayout} className="flex-1 bg-red-600 py-3 rounded text-[10px]">CONFIRM REJECTION</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

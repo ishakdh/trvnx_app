@@ -64,8 +64,9 @@ const DistributorDashboard = ({ user, onLogout }) => {
         salary: '', commPerUser: '', commPerLicense: ''
     });
 
-    const [releaseModal, setReleaseModal] = useState({ isOpen: false, reqId: null, srId: null, amount: 0, accountNumber: '', txId: '' });
+
     const [payoutModal, setPayoutModal] = useState({ isOpen: false, amount: 0 });
+    const [payoutProcessingModal, setPayoutProcessingModal] = useState({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
     const [shopApproveModal, setShopApproveModal] = useState({ isOpen: false, shop: null });
     const [viewShopModal, setViewShopModal] = useState({ isOpen: false, shop: null });
 
@@ -180,11 +181,11 @@ const DistributorDashboard = ({ user, onLogout }) => {
         } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
+        // 🚀 FIXED: Password change function is now separate and clean
     const handleChangePassword = async (e) => {
         e.preventDefault();
         if (passwordForm.new !== passwordForm.confirm) return alert("❌ PASSWORDS DO NOT MATCH.");
         if (passwordForm.new.length < 6) return alert("❌ PASSWORD MUST BE AT LEAST 6 CHARACTERS.");
-
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/change-password`, {
                 method: 'POST',
@@ -195,67 +196,47 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 alert("✅ PASSWORD UPDATED SUCCESSFULLY.");
                 setShowPasswordModal(false);
                 setPasswordForm({ new: '', confirm: '' });
-            } else {
-                alert("❌ FAILED TO UPDATE PASSWORD.");
-            }
-        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFLINE."); }
+            } else { alert("❌ FAILED TO UPDATE PASSWORD."); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
-    // eslint-disable-next-line no-unused-vars
-    const handleReleaseSubmit = async (e) => {
-        e.preventDefault();
-        if (calculatedBalance < releaseModal.amount) return alert("❌ INSUFFICIENT BALANCE: You do not have enough funds to clear this liability.");
+    const handleRejectSrPayout = async () => {
+        if (!payoutProcessingModal.reason) return alert("Please enter a rejection reason.");
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/reject-sr-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                body: JSON.stringify({
+                    requestId: payoutProcessingModal.req._id,
+                    reason: payoutProcessingModal.reason
+                })
+            });
+            if (res.ok) {
+                alert("❌ PAYOUT REJECTED & REFUNDED.");
+                setPayoutProcessingModal({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
+                fetchExtendedData();
+            }
+        } catch (err) { console.error(err); }
+    };
 
+    const handleReleaseSubmit = async (e) => {
+        if (e) e.preventDefault();
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/release-sr-payment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({
-                    srId: releaseModal.srId,
-                    amount: releaseModal.amount,
-                    requestId: releaseModal.reqId,
-                    accountNumber: releaseModal.accountNumber,
-                    txId: releaseModal.txId
+                    srId: payoutProcessingModal.req.userId?._id || payoutProcessingModal.req.userId,
+                    amount: payoutProcessingModal.req.amount,
+                    requestId: payoutProcessingModal.req._id,
+                    accountNumber: 'N/A',
+                    txId: payoutProcessingModal.txId
                 })
             });
             if (res.ok) {
-                const data = await res.json();
-                alert(`✅ PAYMENT COMPLETED: ৳${releaseModal.amount} deducted from your balance.`);
-
-                const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a5' });
-                doc.setFillColor(10, 17, 40); doc.rect(0, 0, 148, 30, 'F'); doc.setTextColor(34, 197, 94); doc.setFontSize(16);
-                doc.text("TRVNX_OS PAYOUT INVOICE", 10, 15); doc.setTextColor(255, 255, 255); doc.setFontSize(8);
-                doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, 22); doc.setTextColor(0, 0, 0); doc.setFontSize(10);
-                doc.text(`Distributor: ${user.name}`, 10, 45);
-                doc.text(`A/C Number: ${releaseModal.accountNumber}`, 10, 52);
-                doc.text(`TxID: ${releaseModal.txId}`, 10, 57);
-                autoTable(doc, { startY: 70, head: [['Description', 'Amount']], body: [['SR Commission Payout', `BDT ${releaseModal.amount}`]], theme: 'grid', headStyles: { fillColor: [34, 197, 94] } });
-                doc.save(`Payout_Invoice_${data.slip?.id || releaseModal.txId}.pdf`);
-
-                setReleaseModal({ isOpen: false, reqId: null, srId: null, amount: 0, accountNumber: '', txId: '' });
-                fetchMyNetwork();
+                alert(`✅ PAYMENT COMPLETED.`);
+                setPayoutProcessingModal({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
                 fetchExtendedData();
-            } else {
-                const err = await res.json();
-                alert(`❌ RELEASE FAILED: ${err.message}`);
-            }
-        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
-    };
-
-    const handleRejectPayment = async (requestId) => {
-        if (!window.confirm("Are you sure you want to reject this payout? The requested amount will be refunded to the SR's wallet.")) return;
-
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/reject-sr-payment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({ requestId })
-            });
-            if (res.ok) {
-                alert("✅ PAYOUT REJECTED: Funds returned to SR.");
-                fetchExtendedData();
-            } else {
-                alert("❌ REJECT FAILED.");
             }
         } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
@@ -923,8 +904,9 @@ const DistributorDashboard = ({ user, onLogout }) => {
                                                 <td className="p-4 text-right">
                                                     {req.status === 'PENDING' ? (
                                                         <div className="flex gap-2 justify-end">
-                                                            <button onClick={() => setReleaseModal({ isOpen: true, reqId: req._id, srId: req.userId?._id, amount: req.amount, accountNumber: '', txId: '' })} className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded text-[8px] tracking-widest font-black shadow-lg">RELEASE</button>
-                                                            <button onClick={() => handleRejectPayment(req._id)} className="bg-red-900/40 hover:bg-red-600 border border-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded text-[8px] tracking-widest font-black shadow-lg">REJECT</button>
+                                                            <button onClick={() => setPayoutProcessingModal({ isOpen: true, req: req, step: 'VIEW', txId: '', reason: '' })} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded text-[8px] font-black uppercase">
+                                                                VIEW & ACTION
+                                                            </button>
                                                         </div>
                                                     ) : (
                                                         <span className={`font-black tracking-widest ${req.status === 'REJECTED' ? 'text-red-500' : 'text-green-500'}`}>{req.status}</span>
@@ -1605,7 +1587,50 @@ const DistributorDashboard = ({ user, onLogout }) => {
                         </div>
                     </div>
                 )}
+                {/* 🚀 THE PAYOUT PROCESSING MODAL */}
+                {payoutProcessingModal.isOpen && payoutProcessingModal.req && (
+                    <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[500] font-mono uppercase">
+                        <div className="bg-[#111A35] border border-blue-500/30 rounded-xl w-full max-w-md p-8 shadow-2xl relative font-bold">
+                            <button onClick={() => setPayoutProcessingModal({isOpen: false, req: null})} className="absolute top-4 right-4 text-gray-500 hover:text-red-500 font-black">✕</button>
+                            <h3 className="text-lg text-white mb-6 border-b border-[#273A60] pb-4 tracking-widest">SR PAYOUT ACTION</h3>
 
+                            {payoutProcessingModal.step === 'VIEW' && (
+                                <div className="space-y-4">
+                                    <div className="bg-[#050A15] p-4 rounded border border-[#273A60] text-[10px]">
+                                        <p className="text-gray-500">REQUESTER: <span className="text-white">{payoutProcessingModal.req.userId?.name}</span></p>
+                                        <p className="text-gray-500 mt-2">AMOUNT: <span className="text-green-400 text-lg">৳{payoutProcessingModal.req.amount}</span></p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'APPROVE'})} className="flex-1 bg-green-600 py-3 rounded text-[10px]">APPROVE</button>
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'REJECT'})} className="flex-1 bg-red-900/40 border border-red-500 text-red-500 py-3 rounded text-[10px]">REJECT</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {payoutProcessingModal.step === 'APPROVE' && (
+                                <div className="space-y-4">
+                                    <label className="text-[9px] text-gray-500">ENTER BANK/MFS TRANSACTION ID</label>
+                                    <input type="text" value={payoutProcessingModal.txId} onChange={e => setPayoutProcessingModal({...payoutProcessingModal, txId: e.target.value})} className="w-full bg-black border border-[#273A60] p-3 text-green-400 outline-none rounded font-mono" placeholder="Required..." />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'VIEW'})} className="px-4 bg-gray-800 rounded text-[10px]">BACK</button>
+                                        <button onClick={handleReleaseSubmit} disabled={!payoutProcessingModal.txId} className="flex-1 bg-green-600 py-3 rounded text-[10px] disabled:opacity-50">CONFIRM & RELEASE</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {payoutProcessingModal.step === 'REJECT' && (
+                                <div className="space-y-4">
+                                    <label className="text-[9px] text-gray-500">REJECTION REASON</label>
+                                    <textarea value={payoutProcessingModal.reason} onChange={e => setPayoutProcessingModal({...payoutProcessingModal, reason: e.target.value})} className="w-full bg-black border border-[#273A60] p-3 text-red-400 outline-none rounded h-24" placeholder="Enter reason..." />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setPayoutProcessingModal({...payoutProcessingModal, step: 'VIEW'})} className="px-4 bg-gray-800 rounded text-[10px]">BACK</button>
+                                        <button onClick={handleRejectSrPayout} className="flex-1 bg-red-600 py-3 rounded text-[10px]">CONFIRM REJECTION</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

@@ -6,7 +6,9 @@ import autoTable from 'jspdf-autotable';
 const Finance = ({
                      activeTab, handleShopRechargeSubmit, rechargeSearchQuery, setRechargeSearchQuery,
                      filteredRechargeShops, rechargeForm, setRechargeForm, isRechargeSearchOpen, setIsRechargeSearchOpen,
-                     fetchData, setFinanceLedger, filteredLedger, handleApprovePayout, handleReleasePayout, user,
+                     fetchData, setFinanceLedger, filteredLedger,
+                     setPayoutProcessingModal,
+                     user,
                      financeSearchTerm, setFinanceSearchTerm, financeStartDate, setFinanceStartDate, financeEndDate, setFinanceEndDate,
                      unusedStartDate, setUnusedStartDate, unusedEndDate, setUnusedEndDate, totalUnusedLiability,
                      setUnusedBalanceList, filteredUnused, setViewUnusedModal, viewUnusedModal,
@@ -472,13 +474,29 @@ const Finance = ({
                                         <td className="p-4 text-green-400 font-mono">৳{tx.amount}</td>
                                         <td className="p-4 text-center text-yellow-500">{tx.status}</td>
                                         <td className="p-4 text-right">
-                                            {tx.status === 'PENDING_ADMIN' && ['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
-                                                <button onClick={() => handleApprovePayout(tx._id)} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded shadow-lg">APPROVE</button>
+                                            {/* 🚀 100% FIXED: Only shows the button to the correct Role for the correct Status */}
+                                            {((tx.status === 'PENDING_ADMIN' && ['SUPER_ADMIN', 'ADMIN'].includes(user.role)) ||
+                                                (tx.status === 'PENDING_ACCOUNTS' && ['SUPER_ADMIN', 'ACCOUNTS'].includes(user.role))) && (
+                                                <button
+                                                    onClick={() => setPayoutProcessingModal({ isOpen: true, req: tx, step: 'VIEW', txId: '', reason: '' })}
+                                                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded shadow-lg text-[8px] font-black uppercase"
+                                                >
+                                                    VIEW & PROCESS
+                                                </button>
                                             )}
-                                            {tx.status === 'PENDING_ACCOUNTS' && ['SUPER_ADMIN', 'ACCOUNTS'].includes(user.role) && (
-                                                <button onClick={() => handleReleasePayout(tx._id)} className="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded shadow-lg">RELEASE FUNDS</button>
+
+                                            {(tx.status === 'SUCCESS' || tx.status === 'RELEASED') && (
+                                                <span className="text-green-500 font-black">● RELEASED</span>
                                             )}
-                                            {tx.status === 'SUCCESS' && <span className="text-green-500">RELEASED</span>}
+
+                                            {tx.status === 'REJECTED' && (
+                                                <span className="text-red-500 font-black">● REJECTED</span>
+                                            )}
+
+                                            {/* If it's pending Admin but I am Accounts, show a neutral status */}
+                                            {tx.status === 'PENDING_ADMIN' && !['SUPER_ADMIN', 'ADMIN'].includes(user.role) && (
+                                                <span className="text-gray-500 italic text-[8px]">WAITING FOR ADMIN</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
