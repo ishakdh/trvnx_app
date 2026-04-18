@@ -36,7 +36,8 @@ const AdminDashboard = ({ user, onLogout }) => {
         division: '', district: '', thana: '', role: 'ADMIN', permissions: []
     });
 
-    const ALL_PERMISSIONS = ['HOME', 'FINANCE_INCOME', 'FINANCE_EXPENSE', 'BALANCE_SHEET', 'CASH_BOOK', 'UNUSED_BALANCE', 'RECHARGE', 'DISTRIBUTOR_PAYOUTS', 'ALL_DEVICES', 'DISTRIBUTOR_SR', 'MARKETING', 'SHOP', 'LICENSE_FEE', 'PAYMENT_GATEWAY', 'QR_CODE', 'ACTIVITY_LOGS', 'LINDUX_USER'];
+    // 🚀 FIXED: Added 'PAY_BONUS' to the matrix
+    const ALL_PERMISSIONS = ['HOME', 'FINANCE_INCOME', 'FINANCE_EXPENSE', 'BALANCE_SHEET', 'CASH_BOOK', 'UNUSED_BALANCE', 'RECHARGE', 'DISTRIBUTOR_PAYOUTS', 'PAY_BONUS', 'ALL_DEVICES', 'DISTRIBUTOR_SR', 'MARKETING', 'SHOP', 'LICENSE_FEE', 'PAYMENT_GATEWAY', 'QR_CODE', 'ACTIVITY_LOGS', 'LINDUX_USER'];
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
@@ -76,6 +77,10 @@ const AdminDashboard = ({ user, onLogout }) => {
     const [rechargeForm, setRechargeForm] = useState({
         date: new Date().toISOString().split('T')[0], shopId: '', shopName: '', shopOwner: '', phone: '',
         amount: '', method: 'Cash', otherDetails: ''
+    });
+    // 🚀 NEW: State for Bonus Payouts
+    const [bonusForm, setBonusForm] = useState({
+        targetId: '', targetRole: '', date: new Date().toISOString().split('T')[0], reason: '', amount: ''
     });
     const [rechargeSearchQuery, setRechargeSearchQuery] = useState('');
     const [isRechargeSearchOpen, setIsRechargeSearchOpen] = useState(false);
@@ -202,7 +207,6 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                 // 1. Store the original admin identity so you can go back
                 localStorage.setItem('original_admin_token', localStorage.getItem('trvnx_token'));
-                // 🚀 FIX: Must be stringified to avoid [object Object] errors
                 localStorage.setItem('original_admin_user', JSON.stringify(user));
 
                 // 2. Overwrite current identity with the mirrored user
@@ -385,6 +389,23 @@ const AdminDashboard = ({ user, onLogout }) => {
         if (res.ok) alert("✅ SYSTEM_SYNC: Global matrix updated.");
     };
 
+    // 🚀 NEW: Handle Bonus Submissions
+    const handleBonusSubmit = async (e) => {
+        e.preventDefault();
+        if(!bonusForm.targetId || bonusForm.targetId === '') return alert("Please select a recipient.");
+
+        try {
+            const res = await fetch(`${VITE_API_URL}/admin/pay-bonus`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                body: JSON.stringify(bonusForm)
+            });
+            if (res.ok) {
+                alert("✅ BONUS DEPLOYED SUCCESSFULLY.");
+                setBonusForm({ targetId: '', targetRole: '', date: new Date().toISOString().split('T')[0], reason: '', amount: '' });
+                fetchData('admin/finance-ledger', setFinanceLedger);
+            } else alert("Failed to deploy bonus.");
+        } catch (error) { console.error(error); }
+    };
     const handleFinanceSubmit = async (e, forceType) => {
         e.preventDefault();
         try {
@@ -1181,6 +1202,10 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                     {(activeTab.startsWith('finance') || activeTab.startsWith('entry_')) && (
                         <Finance
+                            users={validUsers}
+                            bonusForm={bonusForm}
+                            setBonusForm={setBonusForm}
+                            handleBonusSubmit={handleBonusSubmit}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             financeLedger={financeLedger}

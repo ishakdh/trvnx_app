@@ -19,12 +19,10 @@ const Sidebar = ({
         return permissions.includes(p); // Baki shobai permission array theke check hobe
     };
 
-// --- Step B: Visibility Logic (Replace your old canSee variables) ---
     // --- Step B: Visibility Logic ---
-    const canSeeFinance = hasPerm('FINANCE_INCOME') || hasPerm('FINANCE_EXPENSE') || hasPerm('BALANCE_SHEET') || hasPerm('CASH_BOOK') || hasPerm('UNUSED_BALANCE') || hasPerm('RECHARGE') || hasPerm('DISTRIBUTOR_PAYOUTS');
+    const canSeeFinance = hasPerm('FINANCE_INCOME') || hasPerm('FINANCE_EXPENSE') || hasPerm('BALANCE_SHEET') || hasPerm('CASH_BOOK') || hasPerm('UNUSED_BALANCE') || hasPerm('RECHARGE') || hasPerm('DISTRIBUTOR_PAYOUTS') || hasPerm('PAY_BONUS');
 
-// --- Step C: Individual Button Protection (Optional but Recommended) ---
-
+    // --- Step C: Individual Button Protection (Optional but Recommended) ---
     const navClass = (id) => `flex items-center gap-4 px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === id ? 'bg-[#0F172A] text-white border-l-4 border-white' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`;
 
     return (
@@ -63,13 +61,20 @@ const Sidebar = ({
                         </button>
                         {isFinanceMenuOpen && isSidebarOpen && (
                             <div className="ml-4 pl-4 border-l border-orange-900/40 flex flex-col gap-1 mt-1">
-                                <button onClick={() => setActiveTab('finance_entry_income')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_income' ? 'text-green-400 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}>ENTRY INCOME</button>
-                                <button onClick={() => setActiveTab('finance_entry_expense')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_expense' ? 'text-red-400 bg-red-500/10' : 'text-gray-600 hover:text-red-400 transition-colors'} mt-2`}>ENTRY EXPENSE</button>
-                                <button onClick={() => setActiveTab('finance_balance')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_balance' ? 'text-orange-300 bg-orange-500/10' : 'text-gray-600 hover:text-orange-400 transition-colors'} mt-2`}>BALANCE SHEET</button>
-                                <button onClick={() => setActiveTab('finance_cashbook')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_cashbook' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'} mt-2`}>CASH BOOK</button>
-                                <button onClick={() => setActiveTab('finance_unused')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_unused' ? 'text-blue-300 bg-blue-500/10' : 'text-gray-600 hover:text-blue-400 transition-colors'} mt-2`}>UNUSED BALANCE</button>
-                                <button onClick={() => setActiveTab('finance_recharge')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_recharge' ? 'text-teal-300 bg-teal-500/10' : 'text-gray-600 hover:text-teal-400 transition-colors'} mt-2`}>RECHARGE TO SHOP</button>
-                                <button onClick={() => setActiveTab('finance_payouts')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_payouts' ? 'text-purple-300 bg-purple-500/10' : 'text-gray-600 hover:text-purple-400 transition-colors'} mt-2`}>DISTRIBUTOR PAYOUTS</button>
+                                {hasPerm('FINANCE_INCOME') && <button onClick={() => setActiveTab('finance_entry_income')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_income' ? 'text-green-400 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}>ENTRY INCOME</button>}
+                                {hasPerm('FINANCE_EXPENSE') && <button onClick={() => setActiveTab('finance_entry_expense')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_entry_expense' ? 'text-red-400 bg-red-500/10' : 'text-gray-600 hover:text-red-400 transition-colors'} mt-2`}>ENTRY EXPENSE</button>}
+                                {hasPerm('BALANCE_SHEET') && <button onClick={() => setActiveTab('finance_balance')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_balance' ? 'text-orange-300 bg-orange-500/10' : 'text-gray-600 hover:text-orange-400 transition-colors'} mt-2`}>BALANCE SHEET</button>}
+                                {hasPerm('CASH_BOOK') && <button onClick={() => setActiveTab('finance_cashbook')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_cashbook' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'} mt-2`}>CASH BOOK</button>}
+                                {hasPerm('UNUSED_BALANCE') && <button onClick={() => setActiveTab('finance_unused')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_unused' ? 'text-blue-300 bg-blue-500/10' : 'text-gray-600 hover:text-blue-400 transition-colors'} mt-2`}>UNUSED BALANCE</button>}
+                                {hasPerm('RECHARGE') && <button onClick={() => setActiveTab('finance_recharge')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_recharge' ? 'text-teal-300 bg-teal-500/10' : 'text-gray-600 hover:text-teal-400 transition-colors'} mt-2`}>RECHARGE TO SHOP</button>}
+                                {hasPerm('DISTRIBUTOR_PAYOUTS') && <button onClick={() => setActiveTab('finance_payouts')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_payouts' ? 'text-purple-300 bg-purple-500/10' : 'text-gray-600 hover:text-purple-400 transition-colors'} mt-2`}>DISTRIBUTOR PAYOUTS</button>}
+
+                                {/* 🚀 FIXED: Added the permission check for PAY BONUS */}
+                                {hasPerm('PAY_BONUS') && (
+                                    <button onClick={() => setActiveTab('finance_pay_bonus')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_pay_bonus' ? 'text-yellow-300 bg-yellow-500/10' : 'text-gray-600 hover:text-yellow-400 transition-colors'} mt-2`}>
+                                        PAY BONUS
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -135,7 +140,6 @@ const Sidebar = ({
                     </button>
                 )}
 
-                {/* 🚀 NEW: Lindux User Menu */}
                 {hasPerm('LINDUX_USER') && (
                     <div className="flex flex-col">
                         <button onClick={() => setIsLinduxUserMenuOpen(!isLinduxUserMenuOpen)} className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab.startsWith('lindux_user') ? 'text-cyan-400' : 'text-gray-500 hover:bg-gray-800'}`}>

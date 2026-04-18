@@ -4,14 +4,14 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const Finance = ({
-                     activeTab, setActiveTab, handleShopRechargeSubmit, rechargeSearchQuery, setRechargeSearchQuery,
+                     activeTab, handleShopRechargeSubmit, rechargeSearchQuery, setRechargeSearchQuery,
                      filteredRechargeShops, rechargeForm, setRechargeForm, isRechargeSearchOpen, setIsRechargeSearchOpen,
                      fetchData, setFinanceLedger, filteredLedger, handleApprovePayout, handleReleasePayout, user,
                      financeSearchTerm, setFinanceSearchTerm, financeStartDate, setFinanceStartDate, financeEndDate, setFinanceEndDate,
-                     totalIncome, totalExpense, incomeEntries, expenseEntries,
                      unusedStartDate, setUnusedStartDate, unusedEndDate, setUnusedEndDate, totalUnusedLiability,
                      setUnusedBalanceList, filteredUnused, setViewUnusedModal, viewUnusedModal,
-                     financeFormModal, setFinanceFormModal, handleFinanceSubmit
+                     financeFormModal, setFinanceFormModal, handleFinanceSubmit,
+                     users, bonusForm, setBonusForm, handleBonusSubmit // 🚀 PROPS RECEIVED
                  }) => {
 
     const generateFinancePDF = (title, data) => {
@@ -19,7 +19,7 @@ const Finance = ({
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const isExpense = title.includes("Expense");
         doc.setFillColor(10, 17, 40); doc.rect(0, 0, 210, 40, 'F'); doc.setTextColor(isExpense ? 239 : 34, isExpense ? 68 : 197, isExpense ? 68 : 94);
-        doc.setFontSize(18); doc.text(`TRVNX_OS ${title.toUpperCase()}`, 15, 20); doc.setTextColor(255, 255, 255); doc.setFontSize(9);
+        doc.setFontSize(18); doc.text(`LINDUX EMI ${title.toUpperCase()}`, 15, 20); doc.setTextColor(255, 255, 255); doc.setFontSize(9);
         doc.text(`Date Range: ${financeStartDate || 'All Time'} to ${financeEndDate || 'All Time'}`, 15, 30);
         autoTable(doc, {
             startY: 45, head: [['No', 'Date', 'ID No', 'Name', 'Description', 'Amount']],
@@ -28,19 +28,7 @@ const Finance = ({
         });
         const total = data.reduce((sum, item) => sum + Number(item.amount), 0);
         doc.setFontSize(12); doc.setTextColor(0, 0, 0); doc.text(`TOTAL ${isExpense ? 'EXPENSE' : 'INCOME'}: BDT ${total.toLocaleString()}`, 15, doc.lastAutoTable.finalY + 10);
-        doc.save(`TRVNX_${title.replace(' ', '_')}.pdf`);
-    };
-
-    const generateRechargeInvoicePDF = (tx, shop) => {
-        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a5' });
-        doc.setFillColor(10, 17, 40); doc.rect(0, 0, 148, 30, 'F'); doc.setTextColor(34, 197, 94); doc.setFontSize(16);
-        doc.text("TRVNX_OS RECHARGE INVOICE", 10, 15); doc.setTextColor(255, 255, 255); doc.setFontSize(8);
-        doc.text(`Date: ${new Date(tx.createdAt).toLocaleDateString()}`, 10, 22); doc.setTextColor(0, 0, 0); doc.setFontSize(10);
-        doc.text("SHOPKEEPER DETAILS", 10, 45); doc.setFontSize(8); doc.text(`Shop Name: ${shop.business_name || 'N/A'}`, 10, 52);
-        doc.text(`Owner Name: ${shop.name}`, 10, 57); doc.text(`Phone: ${shop.phone}`, 10, 62); doc.text(`Shop ID: ${shop._id.slice(-6).toUpperCase()}`, 10, 67);
-        autoTable(doc, { startY: 80, head: [['Description', 'Payment Method', 'Amount']], body: [['Wallet Recharge', tx.payment_method || 'CASH', `BDT ${tx.amount}`]], theme: 'grid', headStyles: { fillColor: [34, 197, 94] } });
-        doc.setFontSize(8); doc.setTextColor(100, 100, 100); doc.text("This is a system generated digital invoice.", 74, 190, { align: 'center' });
-        doc.save(`Recharge_Invoice_${shop._id.slice(-6)}.pdf`);
+        doc.save(`LINDUX_EMI_${title.replace(' ', '_')}.pdf`);
     };
 
     const generateUnusedStatementPDF = () => {
@@ -106,7 +94,47 @@ const Finance = ({
                 </div>
             )}
 
-            {/* 🚀 NEW: CASH BOOK LAYOUT */}
+            {/* 🚀 NEW: PAY BONUS UI */}
+            {activeTab === 'finance_pay_bonus' && (
+                <div className="bg-[#111A35] border border-[#273A60] rounded-xl p-8 max-w-2xl mx-auto shadow-2xl uppercase font-mono mt-4 mb-8">
+                    <h3 className="text-xl font-black mb-6 border-b border-[#273A60] pb-4 tracking-widest text-yellow-500 text-center">
+                        DEPLOY PROMOTIONAL BONUS
+                    </h3>
+                    <form onSubmit={handleBonusSubmit} className="flex flex-col gap-4 text-[10px] font-bold">
+                        <div>
+                            <label className="text-gray-500 tracking-widest mb-1 block">Date</label>
+                            <input type="date" value={bonusForm?.date || ''} onChange={e => setBonusForm({...bonusForm, date: e.target.value})} className="bg-[#0A1128] border border-[#273A60] p-3 text-white outline-none w-full rounded" required />
+                        </div>
+                        <div>
+                            <label className="text-gray-500 tracking-widest mb-1 block">Select Recipient (Distributor / SR / Shop)</label>
+                            <select value={`${bonusForm?.targetId || ''}|${bonusForm?.targetRole || ''}`} onChange={e => {
+                                const [id, role] = e.target.value.split('|');
+                                setBonusForm({...bonusForm, targetId: id, targetRole: role});
+                            }} className="bg-[#0A1128] border border-[#273A60] p-3 text-blue-300 outline-none w-full rounded cursor-pointer" required>
+                                <option value="|">-- CHOOSE ACCOUNT --</option>
+                                {users && users.filter(u => ['DISTRIBUTOR', 'SR', 'SHOPKEEPER'].includes(u.role)).map(u => (
+                                    <option key={u._id} value={`${u._id}|${u.role}`}>
+                                        [{u.role}] {u.name} {u.business_name ? `(${u.business_name})` : ''} - {u.phone}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-gray-500 tracking-widest mb-1 block">Reason for Bonus</label>
+                            <input type="text" placeholder="e.g. Exceeded Target (Leave blank to write later)" value={bonusForm?.reason || ''} onChange={e => setBonusForm({...bonusForm, reason: e.target.value})} className="bg-[#0A1128] border border-[#273A60] p-3 text-white outline-none w-full rounded" />
+                        </div>
+                        <div>
+                            <label className="text-gray-500 tracking-widest mb-1 block">Bonus Amount (BDT)</label>
+                            <input type="number" placeholder="Enter Amount" value={bonusForm?.amount || ''} onChange={e => setBonusForm({...bonusForm, amount: e.target.value})} className="bg-[#0A1128] border border-[#273A60] p-3 text-white outline-none w-full rounded text-yellow-400 font-black text-sm" required min="1" />
+                        </div>
+                        <button type="submit" className="w-full py-4 rounded text-white font-black tracking-[0.2em] shadow-lg mt-4 transition-all bg-yellow-600 hover:bg-yellow-500">
+                            AUTHORIZE BONUS PAYOUT
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {/* 🚀 CASH BOOK LAYOUT */}
             {activeTab === 'finance_cashbook' && (() => {
                 let cbTotalIncome = 0;
                 let cbTotalExpense = 0;
@@ -118,8 +146,10 @@ const Finance = ({
 
                 const cashbookRows = sortedCashbook.map(tx => {
                     const txType = tx?.type || '';
+                    // 🚀 Cashbook INCLUDES Recharge as Income (because cash physically came into the company)
                     const isIncome = ['MANUAL_INCOME', 'RECHARGE', 'INCOME', 'LICENSE_ACTIVATION'].includes(txType);
-                    const isExpense = ['MANUAL_EXPENSE', 'COMMISSION', 'SR_PAYOUT', 'EXPENSE'].includes(txType) || (txType === 'PAYOUT_REQUEST' && tx?.status === 'SUCCESS');
+                    // 🚀 Added BONUS_EXPENSE to the expense tracker
+                    const isExpense = ['MANUAL_EXPENSE', 'COMMISSION', 'SR_PAYOUT', 'EXPENSE', 'BONUS_EXPENSE'].includes(txType) || (txType === 'PAYOUT_REQUEST' && tx?.status === 'SUCCESS');
 
                     let incAmt = 0;
                     let expAmt = 0;
@@ -141,7 +171,7 @@ const Finance = ({
                     if (!cashbookRows || cashbookRows.length === 0) return alert("No data to download.");
                     const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
                     doc.setFillColor(10, 17, 40); doc.rect(0, 0, 297, 40, 'F'); doc.setTextColor(56, 189, 248); doc.setFontSize(18);
-                    doc.text("TRVNX_OS CASH BOOK STATEMENT", 15, 20); doc.setTextColor(255, 255, 255); doc.setFontSize(9);
+                    doc.text("LINDUX EMI CASH BOOK STATEMENT", 15, 20); doc.setTextColor(255, 255, 255); doc.setFontSize(9);
                     doc.text(`Date Range: ${financeStartDate || 'All Time'} to ${financeEndDate || 'All Time'}`, 15, 30);
 
                     const tableBody = cashbookRows.map((tx, index) => [
@@ -165,7 +195,7 @@ const Finance = ({
 
                     doc.setFontSize(12); doc.setTextColor(0, 0, 0);
                     doc.text(`TOTAL INCOME: BDT ${cbTotalIncome.toLocaleString()}   |   TOTAL EXPENSE: BDT ${cbTotalExpense.toLocaleString()}   |   CASH IN HAND: BDT ${(cbTotalIncome - cbTotalExpense).toLocaleString()}`, 15, doc.lastAutoTable.finalY + 10);
-                    doc.save(`TRVNX_Cash_Book.pdf`);
+                    doc.save(`LINDUX_Cash_Book.pdf`);
                 };
 
                 return (
@@ -252,96 +282,101 @@ const Finance = ({
             })()}
 
             {/* 🚀 LEDGER TABLE (Now only shows for Balance Sheet) */}
-            {activeTab === 'finance_balance' && (
-                <div className="space-y-4">
-                    <div className="flex flex-col md:flex-row justify-between items-center bg-[#0A1128] p-4 rounded border border-[#273A60] gap-4 shadow-lg">
-                        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                            <div className="flex items-center bg-[#050A15] border border-[#273A60] px-3 py-2 rounded w-full md:w-auto">
-                                <span className="text-gray-500 mr-2">🔍</span>
-                                <input type="text" placeholder="Search Ledger..." value={financeSearchTerm} onChange={(e) => setFinanceSearchTerm(e.target.value)} className="bg-transparent border-none outline-none text-xs text-white placeholder-gray-600 font-bold uppercase w-full md:w-48" />
+            {activeTab === 'finance_balance' && (() => {
+                // 🚀 FIXED: Balance Sheet EXCLUDES Recharge so it shows true net revenue
+                const bsIncomeEntries = filteredLedger.filter(tx => tx && (['MANUAL_INCOME', 'INCOME', 'LICENSE_ACTIVATION'].includes(tx.type)));
+                const bsExpenseEntries = filteredLedger.filter(tx => tx && (['MANUAL_EXPENSE', 'COMMISSION', 'SR_PAYOUT', 'EXPENSE', 'BONUS_EXPENSE'].includes(tx.type)));
+
+                const bsTotalIncome = bsIncomeEntries.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
+                const bsTotalExpense = bsExpenseEntries.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
+
+                return (
+                    <div className="space-y-4">
+                        <div className="flex flex-col md:flex-row justify-between items-center bg-[#0A1128] p-4 rounded border border-[#273A60] gap-4 shadow-lg">
+                            <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                                <div className="flex items-center bg-[#050A15] border border-[#273A60] px-3 py-2 rounded w-full md:w-auto">
+                                    <span className="text-gray-500 mr-2">🔍</span>
+                                    <input type="text" placeholder="Search Ledger..." value={financeSearchTerm} onChange={(e) => setFinanceSearchTerm(e.target.value)} className="bg-transparent border-none outline-none text-xs text-white placeholder-gray-600 font-bold uppercase w-full md:w-48" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">From</label>
+                                    <input type="date" className="bg-[#050A15] border border-[#273A60] p-2 text-xs text-blue-300 outline-none uppercase font-bold" value={financeStartDate} onChange={(e) => setFinanceStartDate(e.target.value)} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">To</label>
+                                    <input type="date" className="bg-[#050A15] border border-[#273A60] p-2 text-xs text-blue-300 outline-none uppercase font-bold" value={financeEndDate} onChange={(e) => setFinanceEndDate(e.target.value)} />
+                                </div>
+                                <button onClick={() => { setFinanceStartDate(''); setFinanceEndDate(''); setFinanceSearchTerm(''); }} className="bg-gray-800 text-gray-400 hover:text-white px-3 py-2 rounded text-[9px] font-black tracking-widest transition-colors uppercase mt-4">CLEAR</button>
                             </div>
-                            <div className="flex flex-col">
-                                <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">From</label>
-                                <input type="date" className="bg-[#050A15] border border-[#273A60] p-2 text-xs text-blue-300 outline-none uppercase font-bold" value={financeStartDate} onChange={(e) => setFinanceStartDate(e.target.value)} />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">To</label>
-                                <input type="date" className="bg-[#050A15] border border-[#273A60] p-2 text-xs text-blue-300 outline-none uppercase font-bold" value={financeEndDate} onChange={(e) => setFinanceEndDate(e.target.value)} />
-                            </div>
-                            <button onClick={() => { setFinanceStartDate(''); setFinanceEndDate(''); setFinanceSearchTerm(''); }} className="bg-gray-800 text-gray-400 hover:text-white px-3 py-2 rounded text-[9px] font-black tracking-widest transition-colors uppercase mt-4">CLEAR</button>
-                        </div>
-                        <div className="flex gap-4 w-full md:w-auto justify-end">
-                            <div className="bg-green-900/20 border border-green-500/30 px-4 py-2 rounded text-right shadow-lg">
-                                <div className="text-[8px] text-green-400 font-bold uppercase tracking-[0.2em]">Total Income</div>
-                                <div className="text-lg text-white font-black font-mono">৳{totalIncome.toLocaleString()}</div>
-                            </div>
-                            <div className="bg-red-900/20 border border-red-500/30 px-4 py-2 rounded text-right shadow-lg">
-                                <div className="text-[8px] text-red-400 font-bold uppercase tracking-[0.2em]">Total Expense</div>
-                                <div className="text-lg text-white font-black font-mono">৳{totalExpense.toLocaleString()}</div>
-                            </div>
-                            {(activeTab === 'finance_balance' || activeTab.includes('entry')) && (
+                            <div className="flex gap-4 w-full md:w-auto justify-end">
+                                <div className="bg-green-900/20 border border-green-500/30 px-4 py-2 rounded text-right shadow-lg">
+                                    <div className="text-[8px] text-green-400 font-bold uppercase tracking-[0.2em]">Total Income</div>
+                                    <div className="text-lg text-white font-black font-mono">৳{bsTotalIncome.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-red-900/20 border border-red-500/30 px-4 py-2 rounded text-right shadow-lg">
+                                    <div className="text-[8px] text-red-400 font-bold uppercase tracking-[0.2em]">Total Expense</div>
+                                    <div className="text-lg text-white font-black font-mono">৳{bsTotalExpense.toLocaleString()}</div>
+                                </div>
                                 <div className="bg-blue-900/20 border border-blue-500/30 px-4 py-2 rounded text-right shadow-lg">
                                     <div className="text-[8px] text-blue-400 font-bold uppercase tracking-[0.2em]">Net Balance</div>
-                                    <div className="text-lg text-white font-black font-mono">৳{(totalIncome - totalExpense - totalUnusedLiability).toLocaleString()}</div>
+                                    <div className="text-lg text-white font-black font-mono">৳{(bsTotalIncome - bsTotalExpense - totalUnusedLiability).toLocaleString()}</div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="bg-[#111A35] border border-[#273A60] rounded overflow-hidden shadow-2xl uppercase">
-                        <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-blue-300">Finance Ledger Sync</h3>
-                            <div className="flex gap-2">
-                                <button onClick={() => generateFinancePDF(activeTab.replace('_', ' '), filteredLedger.filter(tx => tx.type !== 'DISTRIBUTOR_EXPENSE' && tx.type !== 'SR_COMMISSION'))} className="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded shadow-lg transition-all font-black uppercase tracking-widest">📄 DOWNLOAD PDF</button>
-                                <button onClick={() => fetchData('admin/finance-ledger', setFinanceLedger)} className="text-[9px] bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full border border-blue-500/30 hover:bg-blue-500/40 transition-all font-black uppercase tracking-widest">↻ SYNC</button>
                             </div>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-[9px] font-bold whitespace-nowrap uppercase font-bold">
-                                <thead className="bg-[#050A15] text-gray-500 tracking-widest font-bold">
-                                <tr>
-                                    <th className="p-4">Date</th>
-                                    <th className="p-4">Type</th>
-                                    <th className="p-4">Title / Name</th>
-                                    <th className="p-4">Description</th>
-                                    <th className="p-4">User / Node</th>
-                                    <th className="p-4 text-right">Amount (IN)</th>
-                                    <th className="p-4 text-right">Amount (OUT)</th>
-                                </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#162447]">
-                                {(activeTab.includes('income') ? incomeEntries :
-                                    activeTab.includes('expense') ? expenseEntries :
-                                        filteredLedger.filter(tx => tx.type !== 'PAYOUT_REQUEST' && tx.type !== 'DISTRIBUTOR_EXPENSE' && tx.type !== 'SR_COMMISSION')).map((tx, idx) => {
 
-                                    const isIncome = ['MANUAL_INCOME', 'RECHARGE', 'INCOME', 'LICENSE_ACTIVATION'].includes(tx.type);
+                        <div className="bg-[#111A35] border border-[#273A60] rounded overflow-hidden shadow-2xl uppercase">
+                            <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-blue-300">Finance Ledger Sync</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={() => generateFinancePDF("Balance Sheet", filteredLedger.filter(tx => tx.type !== 'RECHARGE' && tx.type !== 'DISTRIBUTOR_EXPENSE' && tx.type !== 'SR_COMMISSION'))} className="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded shadow-lg transition-all font-black uppercase tracking-widest">📄 DOWNLOAD PDF</button>
+                                    <button onClick={() => fetchData('admin/finance-ledger', setFinanceLedger)} className="text-[9px] bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full border border-blue-500/30 hover:bg-blue-500/40 transition-all font-black uppercase tracking-widest">↻ SYNC</button>
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-[9px] font-bold whitespace-nowrap uppercase font-bold">
+                                    <thead className="bg-[#050A15] text-gray-500 tracking-widest font-bold">
+                                    <tr>
+                                        <th className="p-4">Date</th>
+                                        <th className="p-4">Type</th>
+                                        <th className="p-4">Title / Name</th>
+                                        <th className="p-4">Description</th>
+                                        <th className="p-4">User / Node</th>
+                                        <th className="p-4 text-right">Amount (IN)</th>
+                                        <th className="p-4 text-right">Amount (OUT)</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#162447]">
+                                    {filteredLedger.filter(tx => tx.type !== 'PAYOUT_REQUEST' && tx.type !== 'RECHARGE' && tx.type !== 'DISTRIBUTOR_EXPENSE' && tx.type !== 'SR_COMMISSION').map((tx, idx) => {
 
-                                    return (
-                                        <tr key={tx._id || idx} className="hover:bg-blue-900/5 transition-colors font-bold">
-                                            <td className="p-4 text-gray-400">{new Date(tx.createdAt || tx.date).toLocaleDateString('en-GB')}</td>
-                                            <td className="p-4"><span className={`px-2 py-0.5 rounded text-[8px] border ${isIncome ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>{tx.type}</span></td>
-                                            <td className="p-4 text-white">
-                                                {tx.name || tx.type}
-                                                {tx.description && <div className="text-[7px] text-gray-500 mt-1">{tx.description}</div>}
-                                            </td>
-                                            <td className="p-4 text-blue-300 font-mono">
-                                                {tx.userId?.name || 'SYS_ADMIN'}
-                                                <span className="text-gray-600 text-[8px] ml-1">({tx.userId && tx.userId._id ? String(tx.userId._id).slice(-6).toUpperCase() : 'SYS'})</span>
-                                            </td>
-                                            <td className="p-4 text-right text-green-400 font-mono font-black">{isIncome ? `৳${tx.amount}` : '-'}</td>
-                                            <td className="p-4 text-right text-red-400 font-mono font-black">{!isIncome ? `৳${tx.amount}` : '-'}</td>
-                                        </tr>
-                                    );
-                                })}
-                                {((activeTab.includes('income') ? incomeEntries : activeTab.includes('expense') ? expenseEntries : filteredLedger.filter(tx => tx.type !== 'PAYOUT_REQUEST')).length === 0) && (
-                                    <tr><td colSpan="7" className="p-8 text-center text-gray-600 text-xs italic tracking-widest">No ledger entries found for this category.</td></tr>
-                                )}
-                                </tbody>
-                            </table>
+                                        const isIncome = ['MANUAL_INCOME', 'INCOME', 'LICENSE_ACTIVATION'].includes(tx.type);
+
+                                        return (
+                                            <tr key={tx._id || idx} className="hover:bg-blue-900/5 transition-colors font-bold">
+                                                <td className="p-4 text-gray-400">{new Date(tx.createdAt || tx.date).toLocaleDateString('en-GB')}</td>
+                                                <td className="p-4"><span className={`px-2 py-0.5 rounded text-[8px] border ${isIncome ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>{tx.type}</span></td>
+                                                <td className="p-4 text-white">
+                                                    {tx.name || tx.type}
+                                                    {tx.description && <div className="text-[7px] text-gray-500 mt-1">{tx.description}</div>}
+                                                </td>
+                                                <td className="p-4 text-blue-300 font-mono">
+                                                    {tx.userId?.name || 'SYS_ADMIN'}
+                                                    <span className="text-gray-600 text-[8px] ml-1">({tx.userId && tx.userId._id ? String(tx.userId._id).slice(-6).toUpperCase() : 'SYS'})</span>
+                                                </td>
+                                                <td className="p-4 text-right text-green-400 font-mono font-black">{isIncome ? `৳${tx.amount}` : '-'}</td>
+                                                <td className="p-4 text-right text-red-400 font-mono font-black">{!isIncome ? `৳${tx.amount}` : '-'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {filteredLedger.filter(tx => tx.type !== 'PAYOUT_REQUEST' && tx.type !== 'RECHARGE').length === 0 && (
+                                        <tr><td colSpan="7" className="p-8 text-center text-gray-600 text-xs italic tracking-widest">No ledger entries found for this category.</td></tr>
+                                    )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {activeTab === 'finance_recharge' && (
                 <RechargeTerminal
@@ -555,7 +590,7 @@ const Finance = ({
                                         <td className="p-4 text-gray-600">{idx + 1}</td>
                                         <td className="p-4 text-gray-400">{new Date(tx.date).toLocaleDateString('en-GB')}</td>
                                         <td className="p-4 text-gray-300 italic">{tx.description}</td>
-                                        <td className="p-4 text-right text-green-400 font-mono font-black">{tx.type === 'RECHARGE' ? `+ BDT ${tx.amount}` : '-'}</td>
+                                        <td className="p-4 text-right text-green-400 font-mono font-black">{tx.type === 'RECHARGE' || tx.type === 'BONUS' ? `+ BDT ${tx.amount}` : '-'}</td>
                                         <td className="p-4 text-right text-red-400 font-mono font-black">{tx.type === 'LICENSE_ACTIVATION' ? `- BDT ${tx.amount}` : '-'}</td>
                                     </tr>
                                 ))}
