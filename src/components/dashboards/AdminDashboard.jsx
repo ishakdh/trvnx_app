@@ -649,6 +649,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     const validUsers = Array.isArray(users) ? users : [];
     const shopUsers = validUsers.filter(u => u && u.role === 'SHOPKEEPER');
     const totalNotifications = shopUsers.filter(s => ['WAITING_ADMIN', 'WAITING_DISTRIBUTOR'].includes(s.approval?.status)).length;
+    const pendingPayoutCount = financeLedger.filter(tx => tx.type === 'PAYOUT_REQUEST' && tx.status === 'PENDING_ADMIN').length;
 
     const filteredRechargeShops = shopUsers.filter(u => {
         if (!rechargeSearchQuery) return true;
@@ -759,6 +760,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
             <Sidebar
                 pendingShopCount={totalNotifications}
+                pendingPayoutCount={pendingPayoutCount}
                 user={user} activeTab={activeTab} setActiveTab={setActiveTab}
                 isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
                 onLogout={onLogout} isFinanceMenuOpen={isFinanceMenuOpen} setIsFinanceMenuOpen={setIsFinanceMenuOpen}

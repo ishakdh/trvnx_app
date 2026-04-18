@@ -2,6 +2,7 @@ import React from 'react';
 
 const Sidebar = ({
                      pendingShopCount,
+                     pendingPayoutCount,
                      user, activeTab, setActiveTab,
                      isSidebarOpen, setIsSidebarOpen, onLogout,
                      isFinanceMenuOpen, setIsFinanceMenuOpen,
@@ -57,7 +58,16 @@ const Sidebar = ({
                                 <span className="text-sm">💳</span>
                                 {isSidebarOpen && <span>FINANCE</span>}
                             </div>
-                            {isSidebarOpen && <span>{isFinanceMenuOpen ? '▼' : '▶'}</span>}
+
+                            <div className="flex items-center gap-2">
+                                {/* 🚀 THE MAIN BADGE */}
+                                {isSidebarOpen && pendingPayoutCount > 0 && (
+                                    <span className="bg-orange-500 text-white rounded-full px-2 py-0.5 text-[8px] animate-pulse shadow-lg shadow-orange-500/50">
+                                        {pendingPayoutCount}
+                                    </span>
+                                )}
+                                {isSidebarOpen && <span>{isFinanceMenuOpen ? '▼' : '▶'}</span>}
+                            </div>
                         </button>
                         {isFinanceMenuOpen && isSidebarOpen && (
                             <div className="ml-4 pl-4 border-l border-orange-900/40 flex flex-col gap-1 mt-1">
@@ -67,7 +77,17 @@ const Sidebar = ({
                                 {hasPerm('CASH_BOOK') && <button onClick={() => setActiveTab('finance_cashbook')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_cashbook' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'} mt-2`}>CASH BOOK</button>}
                                 {hasPerm('UNUSED_BALANCE') && <button onClick={() => setActiveTab('finance_unused')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_unused' ? 'text-blue-300 bg-blue-500/10' : 'text-gray-600 hover:text-blue-400 transition-colors'} mt-2`}>UNUSED BALANCE</button>}
                                 {hasPerm('RECHARGE') && <button onClick={() => setActiveTab('finance_recharge')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_recharge' ? 'text-teal-300 bg-teal-500/10' : 'text-gray-600 hover:text-teal-400 transition-colors'} mt-2`}>RECHARGE TO SHOP</button>}
-                                {hasPerm('DISTRIBUTOR_PAYOUTS') && <button onClick={() => setActiveTab('finance_payouts')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_payouts' ? 'text-purple-300 bg-purple-500/10' : 'text-gray-600 hover:text-purple-400 transition-colors'} mt-2`}>DISTRIBUTOR PAYOUTS</button>}
+                                {hasPerm('DISTRIBUTOR_PAYOUTS') && (
+                                    <button onClick={() => setActiveTab('finance_payouts')} className={`px-4 py-2 rounded flex justify-between items-center text-left text-[9px] font-bold tracking-widest ${activeTab === 'finance_payouts' ? 'text-purple-300 bg-purple-500/10' : 'text-gray-600 hover:text-purple-400 transition-colors'} mt-2`}>
+                                        <span>DISTRIBUTOR PAYOUTS</span>
+                                        {/* 🚀 THE SUB-MENU BADGE */}
+                                        {pendingPayoutCount > 0 && (
+                                            <span className="bg-orange-500 text-white rounded-full px-1.5 py-0.5 text-[7px] animate-pulse">
+                                                {pendingPayoutCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
 
                                 {/* 🚀 FIXED: Added the permission check for PAY BONUS */}
                                 {hasPerm('PAY_BONUS') && (

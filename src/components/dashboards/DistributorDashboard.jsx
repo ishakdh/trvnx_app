@@ -559,7 +559,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
             {label}
         </button>
     );
-
+    const pendingSrPayoutCount = srPayoutRequests.filter(req => req.status === 'PENDING' || req.status === 'PENDING_ADMIN').length;
     return (
         <div className="min-h-screen bg-[#050A15] text-white font-mono flex relative overflow-hidden uppercase font-bold">
             <aside
@@ -593,14 +593,32 @@ const DistributorDashboard = ({ user, onLogout }) => {
                                 <span className="text-sm">👥</span>
                                 {isSidebarOpen && <span>SR MANAGEMENT</span>}
                             </div>
-                            {isSidebarOpen && <span>{isSrMenuOpen ? '▼' : '▶'}</span>}
+
+                            <div className="flex items-center gap-2">
+                                {/* 🚀 2. THE MAIN MENU BADGE */}
+                                {isSidebarOpen && pendingSrPayoutCount > 0 && (
+                                    <span className="bg-orange-500 text-white rounded-full px-2 py-0.5 text-[8px] animate-pulse shadow-lg shadow-orange-500/50">
+                                        {pendingSrPayoutCount}
+                                    </span>
+                                )}
+                                {isSidebarOpen && <span>{isSrMenuOpen ? '▼' : '▶'}</span>}
+                            </div>
                         </button>
                         {isSrMenuOpen && isSidebarOpen && (
                             <div className="ml-4 pl-4 border-l border-indigo-900/40 flex flex-col gap-1 mt-1">
                                 <button onClick={() => setActiveTab('sr_create')} className={`px-4 py-2 rounded text-left text-[9px] tracking-widest ${activeTab === 'sr_create' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400'}`}>CREATE NEW</button>
                                 <button onClick={() => setActiveTab('sr_details')} className={`px-4 py-2 rounded text-left text-[9px] tracking-widest ${activeTab === 'sr_details' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400'}`}>SR DETAILS</button>
                                 <button onClick={() => setActiveTab('sr_ac')} className={`px-4 py-2 rounded text-left text-[9px] tracking-widest ${activeTab === 'sr_ac' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400'}`}>SR FULL A/C</button>
-                                <button onClick={() => setActiveTab('sr_payout_request')} className={`px-4 py-2 rounded text-left text-[9px] tracking-widest ${activeTab === 'sr_payout_request' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400'}`}>SR PAYOUT REQUESTS</button>
+
+                                {/* 👇 THIS IS YOUR NEW BUTTON WITH THE BADGE 👇 */}
+                                <button onClick={() => setActiveTab('sr_payout_request')} className={`px-4 py-2 rounded flex justify-between items-center text-left text-[9px] tracking-widest ${activeTab === 'sr_payout_request' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400'}`}>
+                                    <span>SR PAYOUT REQUESTS</span>
+                                    {pendingSrPayoutCount > 0 && (
+                                        <span className="bg-orange-500 text-white rounded-full px-1.5 py-0.5 text-[7px] animate-pulse shadow-lg shadow-orange-500/50">
+                    {pendingSrPayoutCount}
+                </span>
+                                    )}
+                                </button>
                             </div>
                         )}
                     </div>
