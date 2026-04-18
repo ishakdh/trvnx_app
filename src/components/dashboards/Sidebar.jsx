@@ -24,7 +24,7 @@ const Sidebar = ({
     const canSeeFinance = hasPerm('FINANCE_INCOME') || hasPerm('FINANCE_EXPENSE') || hasPerm('BALANCE_SHEET') || hasPerm('CASH_BOOK') || hasPerm('UNUSED_BALANCE') || hasPerm('RECHARGE') || hasPerm('DISTRIBUTOR_PAYOUTS');
 
 // --- Step C: Individual Button Protection (Optional but Recommended) ---
-    
+
     const navClass = (id) => `flex items-center gap-4 px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all ${activeTab === id ? 'bg-[#0F172A] text-white border-l-4 border-white' : 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'}`;
 
     return (
