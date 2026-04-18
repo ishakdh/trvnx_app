@@ -351,6 +351,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
     useEffect(() => {
         if (['dist_details', 'sr_details', 'shop_list', 'finance_recharge', 'sr_ac', 'marketing_create', 'home', 'lindux_user_list'].includes(activeTab) || activeTab.startsWith('license_')) fetchData('auth/operators', setUsers);
+        if (['dist_details', 'sr_details', 'shop_list', 'finance_recharge', 'finance_pay_bonus', 'sr_ac', 'marketing_create', 'home', 'lindux_user_list'].includes(activeTab) || activeTab.startsWith('license_')) fetchData('auth/operators', setUsers);
         if (['marketing_targets', 'marketing_achievements', 'home'].includes(activeTab)) fetchData('marketing/targets', setMarketingTargets);
         if (activeTab === 'settings' || activeTab === 'gateways') fetchData('settings', setSystemConfig);
         if (activeTab === 'dist_ac') fetchData('admin/commissions', setCommissionList);

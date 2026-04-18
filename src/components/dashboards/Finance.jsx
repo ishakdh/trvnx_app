@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import RechargeTerminal from './RechargeTerminal.jsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -11,8 +11,12 @@ const Finance = ({
                      unusedStartDate, setUnusedStartDate, unusedEndDate, setUnusedEndDate, totalUnusedLiability,
                      setUnusedBalanceList, filteredUnused, setViewUnusedModal, viewUnusedModal,
                      financeFormModal, setFinanceFormModal, handleFinanceSubmit,
-                     users, bonusForm, setBonusForm, handleBonusSubmit // 🚀 PROPS RECEIVED
+                     users, bonusForm, setBonusForm, handleBonusSubmit
                  }) => {
+
+    // 🚀 MOVED TO TOP: Local state for the searchable bonus dropdown
+    const [recipientSearch, setRecipientSearch] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     const generateFinancePDF = (title, data) => {
         if (!data || data.length === 0) return alert("No data to download for the selected dates.");
@@ -105,20 +109,49 @@ const Finance = ({
                             <label className="text-gray-500 tracking-widest mb-1 block">Date</label>
                             <input type="date" value={bonusForm?.date || ''} onChange={e => setBonusForm({...bonusForm, date: e.target.value})} className="bg-[#0A1128] border border-[#273A60] p-3 text-white outline-none w-full rounded" required />
                         </div>
-                        <div>
-                            <label className="text-gray-500 tracking-widest mb-1 block">Select Recipient (Distributor / SR / Shop)</label>
-                            <select value={`${bonusForm?.targetId || ''}|${bonusForm?.targetRole || ''}`} onChange={e => {
-                                const [id, role] = e.target.value.split('|');
-                                setBonusForm({...bonusForm, targetId: id, targetRole: role});
-                            }} className="bg-[#0A1128] border border-[#273A60] p-3 text-blue-300 outline-none w-full rounded cursor-pointer" required>
-                                <option value="|">-- CHOOSE ACCOUNT --</option>
-                                {users && users.filter(u => ['DISTRIBUTOR', 'SR', 'SHOPKEEPER'].includes(u.role)).map(u => (
-                                    <option key={u._id} value={`${u._id}|${u.role}`}>
-                                        [{u.role}] {u.name} {u.business_name ? `(${u.business_name})` : ''} - {u.phone}
-                                    </option>
-                                ))}
-                            </select>
+
+                        {/* 🚀 CUSTOM SEARCHABLE DROPDOWN */}
+                        <div className="relative">
+                            <label className="text-gray-500 tracking-widest mb-1 block">Search & Select Recipient</label>
+                            <input
+                                type="text"
+                                placeholder="Search by Name, Phone, or Shop..."
+                                value={recipientSearch}
+                                onChange={(e) => {
+                                    setRecipientSearch(e.target.value);
+                                    setIsDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsDropdownOpen(true)}
+                                className="bg-[#0A1128] border border-[#273A60] p-3 text-blue-300 outline-none w-full rounded font-black cursor-text"
+                            />
+
+                            {isDropdownOpen && (
+                                <div className="absolute z-50 w-full mt-1 bg-[#050A15] border border-[#273A60] max-h-48 overflow-y-auto rounded shadow-2xl custom-scrollbar">
+                                    {users && users.filter(u => ['DISTRIBUTOR', 'SR', 'SHOPKEEPER'].includes(u.role))
+                                        .filter(u =>
+                                            u.name?.toLowerCase().includes(recipientSearch.toLowerCase()) ||
+                                            u.phone?.includes(recipientSearch) ||
+                                            u.business_name?.toLowerCase().includes(recipientSearch.toLowerCase())
+                                        ).map(u => (
+                                            <div
+                                                key={u._id}
+                                                onClick={() => {
+                                                    setBonusForm({...bonusForm, targetId: u._id, targetRole: u.role});
+                                                    setRecipientSearch(`[${u.role}] ${u.name} ${u.business_name ? `(${u.business_name})` : ''} - ${u.phone}`);
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                                className="p-3 hover:bg-[#111A35] cursor-pointer text-[10px] text-gray-300 border-b border-[#273A60]/50 transition-colors"
+                                            >
+                                                <span className={`font-black ${u.role === 'SHOPKEEPER' ? 'text-teal-400' : 'text-indigo-400'}`}>[{u.role}]</span> {u.name} {u.business_name ? `(${u.business_name})` : ''} - <span className="text-gray-500">{u.phone}</span>
+                                            </div>
+                                        ))}
+                                    {users && users.filter(u => ['DISTRIBUTOR', 'SR', 'SHOPKEEPER'].includes(u.role)).filter(u => u.name?.toLowerCase().includes(recipientSearch.toLowerCase()) || u.phone?.includes(recipientSearch)).length === 0 && (
+                                        <div className="p-4 text-center text-gray-500 italic">No recipients found...</div>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
                         <div>
                             <label className="text-gray-500 tracking-widest mb-1 block">Reason for Bonus</label>
                             <input type="text" placeholder="e.g. Exceeded Target (Leave blank to write later)" value={bonusForm?.reason || ''} onChange={e => setBonusForm({...bonusForm, reason: e.target.value})} className="bg-[#0A1128] border border-[#273A60] p-3 text-white outline-none w-full rounded" />
@@ -146,7 +179,6 @@ const Finance = ({
 
                 const cashbookRows = sortedCashbook.map(tx => {
                     const txType = tx?.type || '';
-                    // 🚀 FIXED LOGIC: True Cash Flow Only
                     const isIncome = ['MANUAL_INCOME', 'INCOME', 'RECHARGE'].includes(txType);
                     const isExpense = ['MANUAL_EXPENSE', 'EXPENSE', 'BONUS_EXPENSE'].includes(txType) || (txType === 'PAYOUT_REQUEST' && tx?.status === 'SUCCESS');
 
