@@ -379,27 +379,48 @@ const DistributorDashboard = ({ user, onLogout }) => {
 
     const { sliced: srList, max: srMax, filtered: srAll } = paginate(mySRs, 'srDetails');
     const { sliced: srAcList } = paginate(srTransactions, 'srAc');
-    const { sliced: incomeList, max: incomeMax, filtered: incomeAll } = paginate(financeLedger.filter(tx => tx.type === 'COMMISSION'), 'income');
+    // 🚀 STEP 1: Define what counts as Money IN and Money OUT
+    const incomeAll = financeLedger.filter(tx =>
+        ['COMMISSION', 'RECHARGE', 'MANUAL_INCOME'].includes(tx.type)
+    );
 
-    const calculatedBalance = incomeAll.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+    const payoutAll = financeLedger.filter(tx =>
+        ['PAYOUT_REQUEST', 'SR_PAYOUT', 'DISTRIBUTOR_EXPENSE', 'MANUAL_EXPENSE'].includes(tx.type) &&
+        tx.status !== 'REJECTED' // Restore balance if Admin rejects the request
+    );
+
+    // 🚀 STEP 2: Calculate the totals
+    const totalIn = incomeAll.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+    const totalOut = payoutAll.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+    // 🚀 STEP 3: The final result
+    const calculatedBalance = totalIn - totalOut;
+
+    // Keep your existing pagination for the Income tab below this
+    const { sliced: incomeList, max: incomeMax } = paginate(
+        financeLedger.filter(tx => tx.type === 'COMMISSION'),
+        'income'
+    );
     const today = new Date();
     const isEndOfMonth = today.getDate() === new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const canRequestPayout = calculatedBalance >= 10000 || isEndOfMonth;
 
-    // 🚀 FIXED FOR MIRROR MODE: Added targetUserId
+    // 🚀 FIXED FOR MIRROR MODE & SMART SR ROUTING
     const handleRequestPayoutSubmit = async (e) => {
         e.preventDefault();
         const requestAmount = Number(payoutModal.amount);
         if (requestAmount > calculatedBalance || requestAmount <= 0) return alert("❌ INVALID AMOUNT.");
 
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/request-payout`, {
+            // 🚀 THE SMART FIX: Tell the frontend to use the SR route if the user is an SR!
+            const endpoint = user.role === 'SR' ? '/transactions/sr-request-payout' : '/transactions/request-payout';
+
+            const res = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
                 },
-                // 🚀 THE KEY: Sending the ID of the user being mirrored
                 body: JSON.stringify({
                     amount: requestAmount,
                     targetUserId: user.id || user._id
@@ -692,8 +713,12 @@ const DistributorDashboard = ({ user, onLogout }) => {
                             <p className="text-[9px] text-gray-500 tracking-widest mt-1">Identity: {user.name} | Wallet: ৳{calculatedBalance.toLocaleString()}</p>
                         </div>
                     </div>
+                    {/* Button only shows or enables if balance is high enough */}
                     {calculatedBalance >= 10000 && (
-                        <button onClick={() => setPayoutModal({isOpen: true, amount: calculatedBalance})} className="bg-green-600 hover:bg-green-500 text-white px-4 md:px-6 py-2 rounded text-[9px] md:text-[10px] shadow-lg shadow-green-900/30 tracking-widest animate-pulse">
+                        <button
+                            onClick={() => setPayoutModal({isOpen: true, amount: calculatedBalance})}
+                            className="bg-green-600 ... animate-pulse"
+                        >
                             + REQUEST PAYOUT
                         </button>
                     )}
