@@ -187,7 +187,8 @@ const AdminDashboard = ({ user, onLogout }) => {
     const handleMirror = async (targetId) => {
         if (!window.confirm("⚠️ INITIATE MIRROR PROTOCOL? You will take full control of this identity.")) return;
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/shadow`, {
+            // 🚀 FIX: Removed 'import.meta.env' so it uses your constant at the top of the file
+            const res = await fetch(`${VITE_API_URL}/auth/shadow`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -201,14 +202,14 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                 // 1. Store the original admin identity so you can go back
                 localStorage.setItem('original_admin_token', localStorage.getItem('trvnx_token'));
-                localStorage.setItem('original_admin_user', localStorage.getItem('trvnx_user'));
+                // 🚀 FIX: Must be stringified to avoid [object Object] errors
+                localStorage.setItem('original_admin_user', JSON.stringify(user));
 
                 // 2. Overwrite current identity with the mirrored user
                 localStorage.setItem('trvnx_token', data.token);
                 localStorage.setItem('trvnx_user', JSON.stringify(data.user));
 
-                // 3. 🚀 THE FIX: Use reload() instead of href='/dashboard'
-                // This prevents the Nginx 404 error and updates the Sidebar permissions instantly.
+                // 3. Force reload to update Sidebar
                 window.location.reload();
 
             } else {
