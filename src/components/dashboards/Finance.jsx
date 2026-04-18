@@ -146,10 +146,9 @@ const Finance = ({
 
                 const cashbookRows = sortedCashbook.map(tx => {
                     const txType = tx?.type || '';
-                    // 🚀 Cashbook INCLUDES Recharge as Income (because cash physically came into the company)
-                    const isIncome = ['MANUAL_INCOME', 'RECHARGE', 'INCOME', 'LICENSE_ACTIVATION'].includes(txType);
-                    // 🚀 Added BONUS_EXPENSE to the expense tracker
-                    const isExpense = ['MANUAL_EXPENSE', 'COMMISSION', 'SR_PAYOUT', 'EXPENSE', 'BONUS_EXPENSE'].includes(txType) || (txType === 'PAYOUT_REQUEST' && tx?.status === 'SUCCESS');
+                    // 🚀 FIXED LOGIC: True Cash Flow Only
+                    const isIncome = ['MANUAL_INCOME', 'INCOME', 'RECHARGE'].includes(txType);
+                    const isExpense = ['MANUAL_EXPENSE', 'EXPENSE', 'BONUS_EXPENSE'].includes(txType) || (txType === 'PAYOUT_REQUEST' && tx?.status === 'SUCCESS');
 
                     let incAmt = 0;
                     let expAmt = 0;
