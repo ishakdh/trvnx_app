@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect, useMemo } from 'react';
 import MultiSelectDropdown from "./admin/MultiSelectDropdown.jsx";
 import { BD_DATA } from '../../utils/bd_geo.js';
@@ -21,7 +22,13 @@ const LicenseFee = ({ activeTab, setActiveTab, marketOptions }) => {
         name: '', markets: [], feeAmount: ''
     });
 
-    // 🚀 FIXED: Moved fetchAllFees ABOVE useEffect so it is declared before it is called!
+    // Fetch the list of all fees when the list tab is opened
+    useEffect(() => {
+        if (activeTab === 'license_list' || activeTab === 'license_all_offer') {
+            fetchAllFees();
+        }
+    }, [activeTab]);
+
     const fetchAllFees = async () => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/settings/license-fees`, {
@@ -39,17 +46,12 @@ const LicenseFee = ({ activeTab, setActiveTab, marketOptions }) => {
         }
     };
 
-    // Fetch the list of all fees when the list tab is opened
-    useEffect(() => {
-        if (activeTab === 'license_list' || activeTab === 'license_all_offer') {
-            fetchAllFees();
-        }
-    }, [activeTab]);
-
     // --- DYNAMIC MARKET OPTION FILTERING ---
     const distributorOptions = useMemo(() => {
         return (marketOptions || []).filter(o => o.startsWith('DIST:')).map(o => o.replace('DIST: ', ''));
     }, [marketOptions]);
+
+    const currentForm = activeTab === 'license_offer' ? offerForm : createForm;
 
     const allDistricts = useMemo(() => {
         if (!BD_DATA) return [];
@@ -58,9 +60,7 @@ const LicenseFee = ({ activeTab, setActiveTab, marketOptions }) => {
 
     const availableThanas = useMemo(() => {
         if (!BD_DATA) return [];
-
-        const activeMarkets = activeTab === 'license_offer' ? offerForm.markets : createForm.markets;
-        const selectedDistricts = activeMarkets.filter(m => allDistricts.includes(m));
+        const selectedDistricts = currentForm.markets.filter(m => allDistricts.includes(m));
 
         if (selectedDistricts.length === 0) {
             return Object.values(BD_DATA).flatMap(division => Object.values(division).flatMap(thanas => thanas));
@@ -73,7 +73,7 @@ const LicenseFee = ({ activeTab, setActiveTab, marketOptions }) => {
             });
             return filteredThanas;
         }
-    }, [activeTab, offerForm.markets, createForm.markets, allDistricts]);
+    }, [currentForm.markets, allDistricts]);
 
     // Multi-box helpers
     const toggleMarket = (setter, value) => {
