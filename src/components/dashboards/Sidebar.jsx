@@ -122,33 +122,7 @@ const Sidebar = ({
                                 <button onClick={() => setActiveTab('dist_details')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'dist_details' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400 transition-colors'}`}>DISTRIBUTOR</button>
                                 <button onClick={() => setActiveTab('sr_details')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'sr_details' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400 transition-colors'}`}>SR</button>
                                 <button onClick={() => setActiveTab('dist_ac')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'dist_ac' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400 transition-colors'}`}>DISTRIBUTOR A/C</button>
-                                {/*<button onClick={() => setActiveTab('sr_ac')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'sr_ac' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400 transition-colors'}`}>SR A/C</button>*/}
-
-                                {/* 🚀 UPGRADED FINANCE MENU */}
-                                <div className="flex flex-col">
-                                    <button
-                                        onClick={() => setIsFinanceMenuOpen(!isFinanceMenuOpen)}
-                                        className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab === 'sr_ac' ? 'text-green-400' : 'text-gray-500 hover:bg-gray-800'}`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-sm">💳</span>
-                                            {isSidebarOpen && <span>FINANCE</span>}
-                                        </div>
-                                        {isSidebarOpen && <span>{isFinanceMenuOpen ? '▼' : '▶'}</span>}
-                                    </button>
-
-                                    {isFinanceMenuOpen && isSidebarOpen && (
-                                        <div className="ml-4 pl-4 border-l border-green-900/40 flex flex-col gap-1 mt-1">
-                                            <button
-                                                onClick={() => setActiveTab('sr_ac')}
-                                                className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'sr_ac' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}
-                                            >
-                                                MY PAYOUT REQUESTS
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
+                                <button onClick={() => setActiveTab('sr_ac')} className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'sr_ac' ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-600 hover:text-indigo-400 transition-colors'}`}>SR A/C</button>
                             </div>
                         )}
                     </div>
