@@ -367,10 +367,10 @@ const SRDashboard = ({ user, onLogout }) => {
                     <div className="flex flex-col">
                         <button
                             onClick={() => setIsFinanceMenuOpen(!isFinanceMenuOpen)}
-                            className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab === 'sr_ac' ? 'text-green-400' : 'text-gray-500 hover:bg-gray-800'}`}
+                            className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab === 'sr_payout_request' ? 'text-green-400' : 'text-gray-500 hover:bg-gray-800'}`}
                         >
                             <div className="flex items-center gap-4">
-                                <span className="text-sm">💳</span>
+                                <span className="text-sm">🏦</span>
                                 {isSidebarOpen && <span>FINANCE</span>}
                             </div>
                             {isSidebarOpen && <span>{isFinanceMenuOpen ? '▼' : '▶'}</span>}
@@ -379,8 +379,8 @@ const SRDashboard = ({ user, onLogout }) => {
                         {isFinanceMenuOpen && isSidebarOpen && (
                             <div className="ml-4 pl-4 border-l border-green-900/40 flex flex-col gap-1 mt-1">
                                 <button
-                                    onClick={() => setActiveTab('sr_ac')}
-                                    className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'sr_ac' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}
+                                    onClick={() => setActiveTab('sr_payout_request')}
+                                    className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'sr_payout_request' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}
                                 >
                                     MY PAYOUT REQUESTS
                                 </button>
@@ -609,10 +609,42 @@ const SRDashboard = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* TAB 2: SR A/C (INCOME & PAYOUT REQUESTS) */}
+                    {/* TAB: SR A/C (INCOME LEDGER) */}
                     {activeTab === 'sr_ac' && (
                         <div className="space-y-6">
-                            {/* 🚀 NEW: SR PAYOUT REQUEST BLOCK (Mirrors Distributor UI) */}
+                            <div className="bg-[#111A35] border border-[#273A60] rounded shadow-2xl">
+                                <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
+                                    <h3 className="text-xs font-bold tracking-widest text-green-400 uppercase">SR Commission Ledger</h3>
+                                    <button onClick={() => downloadPDF('SR_Ledger', ['Date', 'Type', 'Amount'], commissions.filter(tx => tx.type !== 'SR_PAYOUT_REQUEST').map(c=>[new Date(c.createdAt).toLocaleDateString(), c.type, c.amount]))} className="text-[9px] bg-blue-600 px-3 py-1 rounded">📄 PDF</button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-[9px] whitespace-nowrap uppercase font-bold">
+                                        <thead className="bg-[#050A15] text-gray-500 tracking-widest">
+                                        <tr><th className="p-4">Date</th><th className="p-4">Type</th><th className="p-4">Description</th><th className="p-4 text-right">Amount</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#162447]">
+                                        {commissions.filter(tx => tx.type !== 'SR_PAYOUT_REQUEST').map((comm, idx) => (
+                                            <tr key={idx} className="hover:bg-green-900/5">
+                                                <td className="p-4 text-gray-400">{new Date(comm.createdAt).toLocaleDateString()}</td>
+                                                <td className="p-4 text-green-400">{comm.type}</td>
+                                                <td className="p-4 text-gray-300">{comm.description || comm.remarks || 'COMMISSION EARNED'}</td>
+                                                <td className="p-4 text-right text-green-400 font-mono">৳{comm.amount}</td>
+                                            </tr>
+                                        ))}
+                                        {commissions.filter(tx => tx.type !== 'SR_PAYOUT_REQUEST').length === 0 && (
+                                            <tr><td colSpan="4" className="p-8 text-center text-gray-600 italic tracking-widest">No commissions found.</td></tr>
+                                        )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB: MY PAYOUT REQUESTS */}
+                    {activeTab === 'sr_payout_request' && (
+                        <div className="space-y-6">
+                            {/* 🚀 PAYOUT REQUEST BLOCK */}
                             <div className="bg-[#111A35] border border-green-500/30 rounded-xl overflow-hidden shadow-2xl relative">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
                                 <div className="p-4 bg-[#162447] border-b border-[#273A60]">
@@ -634,7 +666,7 @@ const SRDashboard = ({ user, onLogout }) => {
                                 </div>
                             </div>
 
-                            {/* 🚀 NEW: PAYOUT REQUEST HISTORY (Strictly for Payouts) */}
+                            {/* 🚀 PAYOUT REQUEST HISTORY */}
                             <div className="bg-[#111A35] border border-[#273A60] rounded shadow-2xl">
                                 <div className="p-4 bg-[#162447] border-b border-[#273A60]">
                                     <h3 className="text-xs text-gray-300 font-black tracking-widest uppercase">Payout Request History</h3>
@@ -665,31 +697,6 @@ const SRDashboard = ({ user, onLogout }) => {
                                         {commissions.filter(tx => tx.type === 'SR_PAYOUT_REQUEST').length === 0 && (
                                             <tr><td colSpan="4" className="p-8 text-center text-gray-600 italic tracking-widest">No payout requests found.</td></tr>
                                         )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* SR FULL LEDGER (Income History) */}
-                            <div className="bg-[#111A35] border border-[#273A60] rounded shadow-2xl">
-                                <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
-                                    <h3 className="text-xs font-bold tracking-widest text-green-400 uppercase">SR Commission Ledger</h3>
-                                    <button onClick={() => downloadPDF('SR_Ledger', ['Date', 'Type', 'Amount'], commissions.map(c=>[new Date(c.createdAt).toLocaleDateString(), c.type, c.amount]))} className="text-[9px] bg-blue-600 px-3 py-1 rounded">📄 PDF</button>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-[9px] whitespace-nowrap uppercase font-bold">
-                                        <thead className="bg-[#050A15] text-gray-500 tracking-widest">
-                                        <tr><th className="p-4">Date</th><th className="p-4">Type</th><th className="p-4">Description</th><th className="p-4 text-right">Amount</th></tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#162447]">
-                                        {commissions.filter(tx => tx.type !== 'SR_PAYOUT_REQUEST').map((comm, idx) => (
-                                            <tr key={idx} className="hover:bg-green-900/5">
-                                                <td className="p-4 text-gray-400">{new Date(comm.createdAt).toLocaleDateString()}</td>
-                                                <td className="p-4 text-green-400">{comm.type}</td>
-                                                <td className="p-4 text-gray-300">{comm.description || comm.remarks}</td>
-                                                <td className="p-4 text-right text-green-400 font-mono">৳{comm.amount}</td>
-                                            </tr>
-                                        ))}
                                         </tbody>
                                     </table>
                                 </div>
