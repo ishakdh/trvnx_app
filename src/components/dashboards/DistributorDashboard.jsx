@@ -105,22 +105,32 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setMyDevices((devData.devices || []).filter(d => shopIds.includes(String(d.shopkeeper_id?._id || d.shopkeeper_id))));
             }
 
-            // 🚀 GOD MODE BYPASS: Pull straight from Master Ledger & ignore strict ownership links
+            // 🚀 GOD MODE FETCH: Use the Master Ledger to guarantee we see all requests
             const finRes = await fetch(`${import.meta.env.VITE_API_URL}/admin/finance-ledger`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (finRes.ok) {
                 const finData = await finRes.json();
                 const ledgerArray = Array.isArray(finData) ? finData : (finData.data || []);
 
+                // 1. My personal ledger (Distributor's money)
                 const myLedger = ledgerArray.filter(tx => String(tx.userId?._id || tx.userId) === myIdStr);
                 setFinanceLedger(myLedger);
 
-                // Forces ALL pending SR requests to show up so your manual test accounts work!
-                const requests = ledgerArray.filter(tx => tx.type === 'SR_PAYOUT_REQUEST' && ['PENDING', 'PENDING_ADMIN'].includes(tx.status));
+                // 🚀 FIXED: Find actual balance from my latest ledger entry or DB
+                const latestEntry = allUsers.find(u => String(u._id) === myIdStr);
+                if (latestEntry) setDistributorBalance(latestEntry.balance || 0);
+
+                // 2. Pending SR Requests (Notification Badge logic)
+                const mySrIds = mySRs.map(sr => String(sr._id));
+
+                // 🚀 THE FIX: This filter is what drives the badge and the "SR PAYOUT REQUESTS" table
+                const requests = ledgerArray.filter(tx =>
+                    tx.type === 'SR_PAYOUT_REQUEST' &&
+                    tx.status === 'PENDING'
+                );
                 setSrPayoutRequests(requests);
 
-                const mySrIds = mySRs.map(sr => String(sr._id));
+                // 3. Full SR Transaction History
                 const srFullLedger = ledgerArray.filter(tx =>
-                    mySrIds.includes(String(tx.userId?._id || tx.userId)) &&
                     ['COMMISSION', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST'].includes(tx.type)
                 );
                 setSrTransactions(srFullLedger);
@@ -130,10 +140,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
             if (targetRes.ok) {
                 const targetData = await targetRes.json();
                 const allTargets = Array.isArray(targetData) ? targetData : (targetData.data || []);
-
-                const myTargets = allTargets.filter(t =>
-                    String(t.created_by) === myIdStr || String(t.distributor_id) === myIdStr
-                );
+                const myTargets = allTargets.filter(t => String(t.created_by) === myIdStr || String(t.distributor_id) === myIdStr);
                 setMarketingTargets(myTargets);
             }
         } catch (error) { console.error("EXTENDED_SYNC_FAILED", error); }
@@ -547,6 +554,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
     const homeTotalAchievePct = homeTotalTargetAmt > 0 ? ((homeTotalSalesAmt / homeTotalTargetAmt) * 100).toFixed(1) : 0;
 
     const { sliced: deviceList, max: deviceMax, filtered: deviceAll } = paginate(myDevices, 'device');
+
 
     // --- REUSABLE BUTTON ---
     const FilterButton = ({ label, active, onClick }) => (

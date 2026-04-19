@@ -583,78 +583,93 @@ const SRDashboard = ({ user, onLogout }) => {
                         </div>
                     )}
 
-                    {/* TAB 2: SR A/C (INCOME) */}
-                    {/* TAB 2: SR A/C (INCOME) */}
+                    {/* TAB 2: SR A/C (INCOME & PAYOUT REQUESTS) */}
                     {activeTab === 'sr_ac' && (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center bg-[#0A1128] p-4 rounded border border-[#273A60] mb-4 shadow-lg">
-                                <div>
-                                    <p className="text-[8px] text-gray-500 font-black tracking-widest uppercase">Wallet Balance</p>
-                                    <h2 className="text-2xl font-black text-green-400 font-mono">৳{srBalance.toLocaleString()}</h2>
-                                    {!canRequestPayout && <p className="text-[8px] text-red-400 mt-1">Payout locked. Min ৳5000 or End of Month.</p>}
+                        <div className="space-y-6">
+                            {/* 🚀 NEW: SR PAYOUT REQUEST BLOCK (Mirrors Distributor UI) */}
+                            <div className="bg-[#111A35] border border-green-500/30 rounded-xl overflow-hidden shadow-2xl relative">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                                <div className="p-4 bg-[#162447] border-b border-[#273A60]">
+                                    <h3 className="text-xs text-green-400 font-black tracking-widest uppercase">SR PAYOUT REQUEST</h3>
                                 </div>
-                                <button onClick={() => setPayoutModal({isOpen: true, amount: srBalance})} disabled={!canRequestPayout} className={`px-6 py-3 rounded text-[10px] font-black tracking-widest shadow-lg transition-all ${canRequestPayout ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/30 animate-pulse' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
-                                    REQUEST PAYOUT
-                                </button>
+                                <div className="p-8 flex flex-col md:flex-row justify-between items-center gap-8">
+                                    <div>
+                                        <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase mb-1">Available Commission Balance</p>
+                                        <h2 className="text-4xl font-black text-green-400 font-mono">৳{srBalance.toLocaleString()}</h2>
+                                        {!canRequestPayout && <p className="text-[9px] text-red-400 mt-2 font-black italic">Payout locked. Min ৳5,000 or End of Month required.</p>}
+                                    </div>
+                                    <button
+                                        onClick={() => setPayoutModal({isOpen: true, amount: srBalance})}
+                                        disabled={!canRequestPayout}
+                                        className={`px-10 py-4 rounded text-[11px] font-black tracking-[0.2em] shadow-lg transition-all ${canRequestPayout ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/40 animate-pulse' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
+                                    >
+                                        REQUEST PAYOUT TO DISTRIBUTOR
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="bg-[#111A35] border border-[#273A60] rounded overflow-hidden shadow-2xl">
-                                <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
-                                    <h3 className="text-xs font-bold tracking-widest text-green-400 uppercase">SR Full Ledger (Income & Payouts)</h3>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => downloadPDF('SR_Income_Statement', ['Date', 'Type', 'Description', 'Amount', 'Status'], paginatedCommissions.map(c => [new Date(c.date || c.createdAt).toLocaleDateString(), c.type, c.remarks || c.description, `BDT ${c.amount}`, c.status || 'SUCCESS']))} className="text-[9px] bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded transition-all">📄 PDF</button>
-                                    </div>
+                            {/* 🚀 NEW: PAYOUT REQUEST HISTORY (Strictly for Payouts) */}
+                            <div className="bg-[#111A35] border border-[#273A60] rounded shadow-2xl">
+                                <div className="p-4 bg-[#162447] border-b border-[#273A60]">
+                                    <h3 className="text-xs text-gray-300 font-black tracking-widest uppercase">Payout Request History</h3>
                                 </div>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-[9px] whitespace-nowrap uppercase font-bold">
+                                    <table className="w-full text-left text-[9px] font-bold whitespace-nowrap uppercase">
                                         <thead className="bg-[#050A15] text-gray-500 tracking-widest">
                                         <tr>
                                             <th className="p-4">Date</th>
-                                            <th className="p-4">Transaction Type</th>
-                                            <th className="p-4">Description / Remarks</th>
-                                            <th className="p-4 text-right">Amount</th>
+                                            <th className="p-4">Description</th>
+                                            <th className="p-4 text-right">Requested Amount</th>
                                             <th className="p-4 text-right">Status</th>
                                         </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#162447]">
-                                        {/* 🚀 FIXED: Now correctly shows Status, Type, and orange text for deductions */}
-                                        {paginatedCommissions.map((comm, idx) => {
-                                            const isDeduction = comm.type === 'SR_PAYOUT_REQUEST';
-                                            return (
-                                                <tr key={idx} className="hover:bg-green-900/5 transition-colors">
-                                                    <td className="p-4 text-gray-400">{new Date(comm.date || comm.createdAt).toLocaleDateString()}</td>
-                                                    <td className="p-4">
-                                                        <span className={`px-2 py-0.5 rounded text-[8px] border ${isDeduction ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
-                                                            {comm.type}
+                                        {commissions.filter(tx => tx.type === 'SR_PAYOUT_REQUEST').map((tx, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-900/30 transition-colors">
+                                                <td className="p-4 text-gray-400">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                                                <td className="p-4 text-gray-300">{tx.remarks || 'PAYOUT REQUESTED'}</td>
+                                                <td className="p-4 text-right text-white font-mono font-black">৳{tx.amount}</td>
+                                                <td className="p-4 text-right">
+                                                        <span className={`font-black tracking-widest ${tx.status === 'PENDING' ? 'text-yellow-500 animate-pulse' : tx.status === 'REJECTED' ? 'text-red-500' : 'text-green-500'}`}>
+                                                            {tx.status}
                                                         </span>
-                                                    </td>
-                                                    <td className="p-4 text-gray-300">{comm.remarks || comm.description || 'System Transaction'}</td>
-                                                    <td className={`p-4 text-right font-mono text-xs ${isDeduction ? 'text-orange-400' : 'text-green-400'}`}>
-                                                        {isDeduction ? '-' : '+'}৳{comm.amount}
-                                                    </td>
-                                                    <td className="p-4 text-right">
-                                                        <span className={`font-black ${comm.status === 'PENDING' ? 'text-orange-500 animate-pulse' : comm.status === 'REJECTED' ? 'text-red-500' : 'text-green-500'}`}>
-                                                            {comm.status || 'SUCCESS'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                        {paginatedCommissions.length === 0 && (
-                                            <tr><td colSpan="5" className="p-8 text-center text-gray-600 italic">No transactions found.</td></tr>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {commissions.filter(tx => tx.type === 'SR_PAYOUT_REQUEST').length === 0 && (
+                                            <tr><td colSpan="4" className="p-8 text-center text-gray-600 italic tracking-widest">No payout requests found.</td></tr>
                                         )}
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="p-4 bg-[#050A15] border-t border-[#273A60] flex justify-between items-center text-[9px] text-gray-500 font-black">
-                                    <button onClick={() => setCommPage(p => Math.max(1, p - 1))} className="hover:text-white">◀ PREV</button>
-                                    <span>PAGE {commPage} OF {Math.ceil(filteredCommissions.length / ITEMS_PER_PAGE) || 1}</span>
-                                    <button onClick={() => setCommPage(p => Math.min(Math.ceil(filteredCommissions.length / ITEMS_PER_PAGE) || 1, p + 1))} className="hover:text-white">NEXT ▶</button>
+                            </div>
+
+                            {/* SR FULL LEDGER (Income History) */}
+                            <div className="bg-[#111A35] border border-[#273A60] rounded shadow-2xl">
+                                <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
+                                    <h3 className="text-xs font-bold tracking-widest text-green-400 uppercase">SR Commission Ledger</h3>
+                                    <button onClick={() => downloadPDF('SR_Ledger', ['Date', 'Type', 'Amount'], commissions.map(c=>[new Date(c.createdAt).toLocaleDateString(), c.type, c.amount]))} className="text-[9px] bg-blue-600 px-3 py-1 rounded">📄 PDF</button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-[9px] whitespace-nowrap uppercase font-bold">
+                                        <thead className="bg-[#050A15] text-gray-500 tracking-widest">
+                                        <tr><th className="p-4">Date</th><th className="p-4">Type</th><th className="p-4">Description</th><th className="p-4 text-right">Amount</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#162447]">
+                                        {commissions.filter(tx => tx.type !== 'SR_PAYOUT_REQUEST').map((comm, idx) => (
+                                            <tr key={idx} className="hover:bg-green-900/5">
+                                                <td className="p-4 text-gray-400">{new Date(comm.createdAt).toLocaleDateString()}</td>
+                                                <td className="p-4 text-green-400">{comm.type}</td>
+                                                <td className="p-4 text-gray-300">{comm.description || comm.remarks}</td>
+                                                <td className="p-4 text-right text-green-400 font-mono">৳{comm.amount}</td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     )}
-
                     {/* TAB 3: MARKETING > TARGET & ACHIEVEMENT */}
                     {activeTab === 'marketing_targets' && (
                         <div className="space-y-4">
