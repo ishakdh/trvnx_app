@@ -73,12 +73,11 @@ const SRDashboard = ({ user, onLogout }) => {
             const myShopIds = myShops.map(s => String(s._id));
             setDevices(allDevs.filter(d => myShopIds.includes(String(d.shopkeeper_id?._id || d.shopkeeper_id))));
 
-            // 🚀 GOD MODE BYPASS: Pull straight from the Master Ledger to guarantee the row shows up
-            const finRes = await fetch(`${import.meta.env.VITE_API_URL}/admin/finance-ledger`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
-            if (finRes.ok) {
-                const finData = await finRes.json();
-                const ledgerArray = Array.isArray(finData) ? finData : (finData.data || []);
-                const ledgerRows = ledgerArray.filter(tx => String(tx.userId?._id || tx.userId) === myIdStr && ['COMMISSION', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST'].includes(tx.type));
+            // 🚀 PROPER SR ROUTE: Bypasses the Admin firewall and fetches the SR's exact ledger
+            const commRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/sr/commissions?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
+            if (commRes.ok) {
+                const commData = await commRes.json();
+                const ledgerRows = Array.isArray(commData) ? commData : (commData.data || []);
                 setCommissions(ledgerRows);
             }
 

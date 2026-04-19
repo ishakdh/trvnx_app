@@ -116,11 +116,12 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setFinanceLedger(myLedger);
 
                 // 2. Pending SR Requests (Notification Badge logic)
-                const requests = ledgerArray.filter(tx =>
-                    tx.type === 'SR_PAYOUT_REQUEST' &&
-                    tx.status === 'PENDING'
-                );
-                setSrPayoutRequests(requests);
+                // 🚀 PROPER ROUTE: Ask the backend Smart Router for pending requests
+                const pendingRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/pending?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
+                if (pendingRes.ok) {
+                    const pendingData = await pendingRes.json();
+                    setSrPayoutRequests(Array.isArray(pendingData) ? pendingData : []);
+                }
 
                 // 3. Full SR Transaction History
                 const srFullLedger = ledgerArray.filter(tx =>
