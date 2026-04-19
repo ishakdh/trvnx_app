@@ -488,7 +488,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     const handleRejectPayout = async () => {
         if (!payoutProcessingModal.reason) return alert("Please enter a rejection reason.");
         try {
-            const res = await fetch(`${VITE_API_URL}/transactions/reject-sr-payment`, {
+            const res = await fetch(`${VITE_API_URL}/transactions/reject-payout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify({
