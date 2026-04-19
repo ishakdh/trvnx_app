@@ -110,6 +110,11 @@ const DistributorDashboard = ({ user, onLogout }) => {
 
                 const mySrIds = mySRs.map(sr => String(sr._id));
 
+                // 🚀 FIXED: We extract the SR Payout Requests locally from the master ledger.
+                // This bypasses any strict backend routing rules and 100% guarantees they load.
+                const requests = ledgerArray.filter(tx => tx.type === 'SR_PAYOUT_REQUEST' && mySrIds.includes(String(tx.userId?._id || tx.userId)));
+                setSrPayoutRequests(requests);
+
                 const srFullLedger = ledgerArray.filter(tx =>
                     mySrIds.includes(String(tx.userId?._id || tx.userId)) &&
                     ['COMMISSION', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST'].includes(tx.type)
@@ -117,23 +122,14 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setSrTransactions(srFullLedger);
             }
 
-            // 🚀 NEW: Call the Smart Router for Pending Payouts (with Mirror Mode!)
-            const pendingRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/pending?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
-            if (pendingRes.ok) {
-                const pendingData = await pendingRes.json();
-                setSrPayoutRequests(pendingData);
-            }
-
             const targetRes = await fetch(`${import.meta.env.VITE_API_URL}/marketing/targets`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (targetRes.ok) {
                 const targetData = await targetRes.json();
                 const allTargets = Array.isArray(targetData) ? targetData : (targetData.data || []);
 
-                // Only show targets deployed by this Distributor OR deployed specifically TO this Distributor
                 const myTargets = allTargets.filter(t =>
                     String(t.created_by) === myIdStr || String(t.distributor_id) === myIdStr
                 );
-
                 setMarketingTargets(myTargets);
             }
         } catch (error) { console.error("EXTENDED_SYNC_FAILED", error); }

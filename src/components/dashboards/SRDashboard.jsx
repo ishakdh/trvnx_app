@@ -583,11 +583,12 @@ const SRDashboard = ({ user, onLogout }) => {
                     )}
 
                     {/* TAB 2: SR A/C (INCOME) */}
+                    {/* TAB 2: SR A/C (INCOME) */}
                     {activeTab === 'sr_ac' && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center bg-[#0A1128] p-4 rounded border border-[#273A60] mb-4 shadow-lg">
                                 <div>
-                                    <p className="text-[8px] text-gray-500 font-black tracking-widest uppercase">Total Owed by Distributor</p>
+                                    <p className="text-[8px] text-gray-500 font-black tracking-widest uppercase">Wallet Balance</p>
                                     <h2 className="text-2xl font-black text-green-400 font-mono">৳{srBalance.toLocaleString()}</h2>
                                     {!canRequestPayout && <p className="text-[8px] text-red-400 mt-1">Payout locked. Min ৳5000 or End of Month.</p>}
                                 </div>
@@ -598,30 +599,48 @@ const SRDashboard = ({ user, onLogout }) => {
 
                             <div className="bg-[#111A35] border border-[#273A60] rounded overflow-hidden shadow-2xl">
                                 <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
-                                    <h3 className="text-xs font-bold tracking-widest text-green-400">SR Earnings Ledger (Deducted from Distributor)</h3>
+                                    <h3 className="text-xs font-bold tracking-widest text-green-400 uppercase">SR Full Ledger (Income & Payouts)</h3>
                                     <div className="flex gap-2">
-                                        <button onClick={() => downloadPDF('SR_Income_Statement', ['Date', 'Description', 'Amount'], paginatedCommissions.map(c => [new Date(c.date || c.createdAt).toLocaleDateString(), c.description, `BDT ${c.amount}`]))} className="text-[9px] bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded transition-all">📄 PDF</button>
+                                        <button onClick={() => downloadPDF('SR_Income_Statement', ['Date', 'Type', 'Description', 'Amount', 'Status'], paginatedCommissions.map(c => [new Date(c.date || c.createdAt).toLocaleDateString(), c.type, c.remarks || c.description, `BDT ${c.amount}`, c.status || 'SUCCESS']))} className="text-[9px] bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded transition-all">📄 PDF</button>
                                     </div>
                                 </div>
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-[9px] whitespace-nowrap">
+                                    <table className="w-full text-left text-[9px] whitespace-nowrap uppercase font-bold">
                                         <thead className="bg-[#050A15] text-gray-500 tracking-widest">
                                         <tr>
                                             <th className="p-4">Date</th>
-                                            <th className="p-4">Description / Source Shop</th>
-                                            <th className="p-4 text-right">Earned Amount</th>
+                                            <th className="p-4">Transaction Type</th>
+                                            <th className="p-4">Description / Remarks</th>
+                                            <th className="p-4 text-right">Amount</th>
+                                            <th className="p-4 text-right">Status</th>
                                         </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#162447]">
-                                        {paginatedCommissions.map((comm, idx) => (
-                                            <tr key={idx} className="hover:bg-green-900/5 transition-colors">
-                                                <td className="p-4 text-gray-400">{new Date(comm.date || comm.createdAt).toLocaleDateString()}</td>
-                                                <td className="p-4 text-gray-300">{comm.description || 'Commission Allocation'}</td>
-                                                <td className="p-4 text-right text-green-400 font-mono text-xs">৳{comm.amount}</td>
-                                            </tr>
-                                        ))}
+                                        {/* 🚀 FIXED: Now correctly shows Status, Type, and orange text for deductions */}
+                                        {paginatedCommissions.map((comm, idx) => {
+                                            const isDeduction = comm.type === 'SR_PAYOUT_REQUEST';
+                                            return (
+                                                <tr key={idx} className="hover:bg-green-900/5 transition-colors">
+                                                    <td className="p-4 text-gray-400">{new Date(comm.date || comm.createdAt).toLocaleDateString()}</td>
+                                                    <td className="p-4">
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] border ${isDeduction ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
+                                                            {comm.type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-gray-300">{comm.remarks || comm.description || 'System Transaction'}</td>
+                                                    <td className={`p-4 text-right font-mono text-xs ${isDeduction ? 'text-orange-400' : 'text-green-400'}`}>
+                                                        {isDeduction ? '-' : '+'}৳{comm.amount}
+                                                    </td>
+                                                    <td className="p-4 text-right">
+                                                        <span className={`font-black ${comm.status === 'PENDING' ? 'text-orange-500 animate-pulse' : comm.status === 'REJECTED' ? 'text-red-500' : 'text-green-500'}`}>
+                                                            {comm.status || 'SUCCESS'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                         {paginatedCommissions.length === 0 && (
-                                            <tr><td colSpan="3" className="p-8 text-center text-gray-600 italic">No commission records found. Note: Payment releases are managed strictly by your Distributor.</td></tr>
+                                            <tr><td colSpan="5" className="p-8 text-center text-gray-600 italic">No transactions found.</td></tr>
                                         )}
                                         </tbody>
                                     </table>
