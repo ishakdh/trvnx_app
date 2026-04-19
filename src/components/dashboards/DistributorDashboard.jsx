@@ -116,8 +116,10 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setFinanceLedger(myLedger);
 
                 // 2. Pending SR Requests (Notification Badge logic)
-                // 🚀 PROPER ROUTE: Ask the backend Smart Router for pending requests
-                const pendingRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/pending?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
+                // 🚀 FIXED: Ask the Smart Router directly for pending requests!
+                const pendingRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/pending?targetUserId=${myIdStr}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` }
+                });
                 if (pendingRes.ok) {
                     const pendingData = await pendingRes.json();
                     setSrPayoutRequests(Array.isArray(pendingData) ? pendingData : []);
