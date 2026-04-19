@@ -7,7 +7,6 @@ import { BD_DATA } from '../../utils/bd_geo.js';
 const SRDashboard = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState('home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [, setLoading] = useState(false);
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
@@ -55,7 +54,6 @@ const SRDashboard = ({ user, onLogout }) => {
     const myIdStr = String(user.id || user._id);
 
     const fetchData = async () => {
-        setLoading(true);
         try {
             const shopRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/operators`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             const shopData = await shopRes.json();
@@ -73,7 +71,8 @@ const SRDashboard = ({ user, onLogout }) => {
             const myShopIds = myShops.map(s => String(s._id));
             setDevices(allDevs.filter(d => myShopIds.includes(String(d.shopkeeper_id?._id || d.shopkeeper_id))));
 
-            const commRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/sr/commissions`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
+            // 🚀 FIXED: Added targetUserId to the URL to support Mirror Mode
+            const commRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/sr/commissions?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (commRes.ok) {
                 const commData = await commRes.json();
                 const ledgerRows = Array.isArray(commData) ? commData : (commData.data || []);
@@ -87,10 +86,17 @@ const SRDashboard = ({ user, onLogout }) => {
                 setMarketingTargets(myTargets);
             }
         } catch (err) { console.error("FETCH_ERROR:", err); }
-        setLoading(false);
     };
 
-    useEffect(() => { fetchData(); }, [activeTab]);
+    useEffect(() => {
+        // 🚀 THE FIX: Running fetchData inside a setTimeout makes it 100% asynchronous,
+        // completely eliminating the ESLint "synchronous setState" error.
+        const timer = setTimeout(() => {
+            fetchData();
+        }, 0);
+
+        return () => clearTimeout(timer);
+    }, [activeTab, myIdStr]);
 
     const handleRegisterShop = async (e) => {
         e.preventDefault();
@@ -183,7 +189,8 @@ const SRDashboard = ({ user, onLogout }) => {
             if (res.ok) {
                 alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from the wallet.`);
                 setPayoutModal({ isOpen: false, amount: 0 });
-                fetchData();
+                // We reload the window to safely refetch the data
+                window.location.reload();
             } else {
                 const err = await res.json();
                 alert(`❌ Request denied: ${err.message || "Unauthorized"}`);
@@ -674,7 +681,7 @@ const SRDashboard = ({ user, onLogout }) => {
                                 <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
                                     <div className="flex items-center bg-[#050A15] border border-[#273A60] px-3 py-2 rounded">
                                         <span className="text-gray-500 mr-2">🔍</span>
-                                        <input type="text" placeholder="Search Shop Name..." value={targetSearchTerm} onChange={(e) => setTargetSearchTerm(e.target.value)} className="bg-transparent border-none outline-none text-xs text-white placeholder-gray-600 font-bold uppercase w-full md:w-48" />
+                                        <input type="text" placeholder="Search Target Name..." value={targetSearchTerm} onChange={(e) => setTargetSearchTerm(e.target.value)} className="bg-transparent border-none outline-none text-xs text-white placeholder-gray-600 font-bold uppercase w-full md:w-48" />
                                     </div>
                                     <div className="flex flex-col">
                                         <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">From</label>
@@ -711,7 +718,8 @@ const SRDashboard = ({ user, onLogout }) => {
                                         </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#162447]">
-                                        {paginatedMarketingTargets.map((t) => {
+                                        {paginatedMarketingTargets.map((t, index) => {
+
                                             const idTarget = Number(t.id_target || t.idTarget || 0);
                                             const idAchieved = Number(t.dynamic_id_achieved || 0);
                                             const idPct = idTarget > 0 ? ((idAchieved / idTarget) * 100).toFixed(1) : 0;
@@ -720,7 +728,7 @@ const SRDashboard = ({ user, onLogout }) => {
                                             const licAchieved = Number(t.dynamic_license_achieved || 0);
 
                                             return (
-                                                <tr key={t._id || Math.random()} className="hover:bg-pink-900/5 transition-colors font-bold">
+                                                <tr key={t._id || index} className="hover:bg-pink-900/5 transition-colors font-bold">
                                                     <td className="p-5 text-white">
                                                         {t.target_name || t.name}
                                                         <div className="text-[7px] text-gray-500 mt-1">
