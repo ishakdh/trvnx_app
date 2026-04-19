@@ -221,7 +221,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
     const handleRejectSrPayout = async () => {
         if (!payoutProcessingModal.reason) return alert("Please enter a rejection reason.");
         try {
-            // 🚀 FIXED: Pointing to the correct SR rejection endpoint!
+            // 🚀 FIXED: Pointing to the correct SR rejection endpoint
             const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/reject-sr-payment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
@@ -233,16 +233,38 @@ const DistributorDashboard = ({ user, onLogout }) => {
             if (res.ok) {
                 alert("❌ PAYOUT REJECTED & REFUNDED.");
                 setPayoutProcessingModal({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
-                fetchExtendedData(); // Refresh the table
+                fetchExtendedData();
             } else {
-                // Added error handling so you know if it fails!
                 const err = await res.json();
                 alert(`❌ REJECTION FAILED: ${err.message || 'Unauthorized'}`);
             }
-        } catch (err) {
-            console.error(err);
-            alert("⚠️ SYSTEM OFFLINE.");
-        }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
+    };
+
+    const handleReleaseSubmit = async (e) => {
+        if (e) e.preventDefault();
+        try {
+            // 🚀 FIXED: Changed /admin to /transactions to match your backend routes!
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/release-sr-payment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
+                body: JSON.stringify({
+                    srId: payoutProcessingModal.req.userId?._id || payoutProcessingModal.req.userId,
+                    amount: payoutProcessingModal.req.amount,
+                    requestId: payoutProcessingModal.req._id,
+                    accountNumber: 'N/A',
+                    txId: payoutProcessingModal.txId
+                })
+            });
+            if (res.ok) {
+                alert(`✅ PAYMENT COMPLETED.`);
+                setPayoutProcessingModal({ isOpen: false, req: null, step: 'VIEW', txId: '', reason: '' });
+                fetchExtendedData();
+            } else {
+                const err = await res.json();
+                alert(`❌ RELEASE FAILED: ${err.message || 'Unauthorized'}`);
+            }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const handleCreateSR = async (e) => {
