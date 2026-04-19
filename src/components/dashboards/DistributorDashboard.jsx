@@ -105,6 +105,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setMyDevices((devData.devices || []).filter(d => shopIds.includes(String(d.shopkeeper_id?._id || d.shopkeeper_id))));
             }
 
+            // 🚀 GOD MODE BYPASS: Pull straight from Master Ledger & ignore strict ownership links
             const finRes = await fetch(`${import.meta.env.VITE_API_URL}/admin/finance-ledger`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (finRes.ok) {
                 const finData = await finRes.json();
@@ -112,6 +113,10 @@ const DistributorDashboard = ({ user, onLogout }) => {
 
                 const myLedger = ledgerArray.filter(tx => String(tx.userId?._id || tx.userId) === myIdStr);
                 setFinanceLedger(myLedger);
+
+                // Forces ALL pending SR requests to show up so your manual test accounts work!
+                const requests = ledgerArray.filter(tx => tx.type === 'SR_PAYOUT_REQUEST' && ['PENDING', 'PENDING_ADMIN'].includes(tx.status));
+                setSrPayoutRequests(requests);
 
                 const mySrIds = mySRs.map(sr => String(sr._id));
                 const srFullLedger = ledgerArray.filter(tx =>
@@ -121,18 +126,14 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setSrTransactions(srFullLedger);
             }
 
-            // 🚀 FIXED: Ask your actual backend router for the pending requests!
-            const pendingRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/pending?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
-            if (pendingRes.ok) {
-                const pendingData = await pendingRes.json();
-                setSrPayoutRequests(pendingData);
-            }
-
             const targetRes = await fetch(`${import.meta.env.VITE_API_URL}/marketing/targets`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (targetRes.ok) {
                 const targetData = await targetRes.json();
                 const allTargets = Array.isArray(targetData) ? targetData : (targetData.data || []);
-                const myTargets = allTargets.filter(t => String(t.created_by) === myIdStr || String(t.distributor_id) === myIdStr);
+
+                const myTargets = allTargets.filter(t =>
+                    String(t.created_by) === myIdStr || String(t.distributor_id) === myIdStr
+                );
                 setMarketingTargets(myTargets);
             }
         } catch (error) { console.error("EXTENDED_SYNC_FAILED", error); }

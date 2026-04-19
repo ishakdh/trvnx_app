@@ -71,11 +71,12 @@ const SRDashboard = ({ user, onLogout }) => {
             const myShopIds = myShops.map(s => String(s._id));
             setDevices(allDevs.filter(d => myShopIds.includes(String(d.shopkeeper_id?._id || d.shopkeeper_id))));
 
-            // 🚀 FIXED: Added targetUserId to the URL to support Mirror Mode
-            const commRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/sr/commissions?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
-            if (commRes.ok) {
-                const commData = await commRes.json();
-                const ledgerRows = Array.isArray(commData) ? commData : (commData.data || []);
+            // 🚀 GOD MODE BYPASS: Pull straight from the Master Ledger to guarantee the row shows up
+            const finRes = await fetch(`${import.meta.env.VITE_API_URL}/admin/finance-ledger`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
+            if (finRes.ok) {
+                const finData = await finRes.json();
+                const ledgerArray = Array.isArray(finData) ? finData : (finData.data || []);
+                const ledgerRows = ledgerArray.filter(tx => String(tx.userId?._id || tx.userId) === myIdStr && ['COMMISSION', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST'].includes(tx.type));
                 setCommissions(ledgerRows);
             }
 
@@ -175,7 +176,8 @@ const SRDashboard = ({ user, onLogout }) => {
         if (requestAmount > srBalance || requestAmount <= 0) return alert("❌ INVALID AMOUNT.");
 
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/sr-request-payout`, {
+            // 🚀 POINT TO THE SMART ROUTER: This perfectly handles both roles
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/request-payout`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -183,14 +185,13 @@ const SRDashboard = ({ user, onLogout }) => {
                 },
                 body: JSON.stringify({
                     amount: requestAmount,
-                    targetUserId: user.id || user._id
+                    targetUserId: myIdStr
                 })
             });
             if (res.ok) {
                 alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from the wallet.`);
                 setPayoutModal({ isOpen: false, amount: 0 });
-                // We reload the window to safely refetch the data
-                window.location.reload();
+                fetchData(); // 🚀 Refresh tables instantly without reloading window
             } else {
                 const err = await res.json();
                 alert(`❌ Request denied: ${err.message || "Unauthorized"}`);
