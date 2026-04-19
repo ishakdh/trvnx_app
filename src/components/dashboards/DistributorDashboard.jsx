@@ -30,6 +30,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
     const [financeLedger, setFinanceLedger] = useState([]);
     const [srTransactions, setSrTransactions] = useState([]);
     const [srPayoutRequests, setSrPayoutRequests] = useState([]);
+    const [distributorBalance, setDistributorBalance] = useState(user.balance || 0);
 
     // 🚀 NEW: Target Creation States
     const [targetMonth, setTargetMonth] = useState(new Date().getMonth());
@@ -81,6 +82,10 @@ const DistributorDashboard = ({ user, onLogout }) => {
             const data = await response.json();
             const allUsers = Array.isArray(data) ? data : (data.users || data.data || []);
 
+            // 🚀 FIXED: Grab actual balance from DB instead of doing manual math!
+            const myLiveProfile = allUsers.find(u => String(u._id) === myIdStr);
+            if (myLiveProfile) setDistributorBalance(myLiveProfile.balance || 0);
+
             const filteredSRs = allUsers.filter(op => op.role === 'SR' && (String(op.parent_id) === myIdStr || String(op.createdBy) === myIdStr));
             setMySRs(filteredSRs);
             const srIds = filteredSRs.map(sr => String(sr._id));
@@ -109,12 +114,6 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setFinanceLedger(myLedger);
 
                 const mySrIds = mySRs.map(sr => String(sr._id));
-
-                // 🚀 FIXED: We extract the SR Payout Requests locally from the master ledger.
-                // This bypasses any strict backend routing rules and 100% guarantees they load.
-                const requests = ledgerArray.filter(tx => tx.type === 'SR_PAYOUT_REQUEST' && mySrIds.includes(String(tx.userId?._id || tx.userId)));
-                setSrPayoutRequests(requests);
-
                 const srFullLedger = ledgerArray.filter(tx =>
                     mySrIds.includes(String(tx.userId?._id || tx.userId)) &&
                     ['COMMISSION', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST'].includes(tx.type)
@@ -122,14 +121,18 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 setSrTransactions(srFullLedger);
             }
 
+            // 🚀 FIXED: Ask your actual backend router for the pending requests!
+            const pendingRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions/pending?targetUserId=${myIdStr}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
+            if (pendingRes.ok) {
+                const pendingData = await pendingRes.json();
+                setSrPayoutRequests(pendingData);
+            }
+
             const targetRes = await fetch(`${import.meta.env.VITE_API_URL}/marketing/targets`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (targetRes.ok) {
                 const targetData = await targetRes.json();
                 const allTargets = Array.isArray(targetData) ? targetData : (targetData.data || []);
-
-                const myTargets = allTargets.filter(t =>
-                    String(t.created_by) === myIdStr || String(t.distributor_id) === myIdStr
-                );
+                const myTargets = allTargets.filter(t => String(t.created_by) === myIdStr || String(t.distributor_id) === myIdStr);
                 setMarketingTargets(myTargets);
             }
         } catch (error) { console.error("EXTENDED_SYNC_FAILED", error); }
@@ -371,55 +374,40 @@ const DistributorDashboard = ({ user, onLogout }) => {
 
     const { sliced: srList, max: srMax, filtered: srAll } = paginate(mySRs, 'srDetails');
     const { sliced: srAcList } = paginate(srTransactions, 'srAc');
-    // 🚀 STEP 1: Define what counts as Money IN and Money OUT
-    const incomeAll = financeLedger.filter(tx =>
-        ['COMMISSION', 'RECHARGE', 'MANUAL_INCOME'].includes(tx.type)
-    );
 
-    const payoutAll = financeLedger.filter(tx =>
-        ['PAYOUT_REQUEST', 'SR_PAYOUT', 'DISTRIBUTOR_EXPENSE', 'MANUAL_EXPENSE'].includes(tx.type) &&
-        tx.status !== 'REJECTED' // Restore balance if Admin rejects the request
-    );
+    // Keep this just to populate the tables at the bottom of the page
+    const incomeAll = financeLedger.filter(tx => ['COMMISSION', 'RECHARGE', 'MANUAL_INCOME'].includes(tx.type));
 
-    // 🚀 STEP 2: Calculate the totals
-    const totalIn = incomeAll.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-    const totalOut = payoutAll.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-
-    // 🚀 STEP 3: The final result
-    const calculatedBalance = totalIn - totalOut;
-
-    // Keep your existing pagination for the Income tab below this
     const { sliced: incomeList, max: incomeMax } = paginate(
-        financeLedger.filter(tx => tx.type === 'COMMISSION'),
-        'income'
+        financeLedger.filter(tx => tx.type === 'COMMISSION'), 'income'
     );
+
     const today = new Date();
     const isEndOfMonth = today.getDate() === new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const canRequestPayout = calculatedBalance >= 10000 || isEndOfMonth;
 
-    // 🚀 FIXED FOR MIRROR MODE & SMART SR ROUTING
+    // 🚀 STRICT 10,000 LIMIT FOR DISTRIBUTORS
+    const canRequestPayout = distributorBalance >= 10000 || isEndOfMonth;
+
     const handleRequestPayoutSubmit = async (e) => {
         e.preventDefault();
         const requestAmount = Number(payoutModal.amount);
-        if (requestAmount > calculatedBalance || requestAmount <= 0) return alert("❌ INVALID AMOUNT.");
+
+        if (requestAmount > distributorBalance || requestAmount <= 0) return alert("❌ INVALID AMOUNT. Check Balance.");
+        if (requestAmount < 10000 && !isEndOfMonth) return alert("❌ Minimum payout for Distributor is ৳10,000.");
 
         try {
-            // 🚀 THE SMART FIX: Tell the frontend to use the SR route if the user is an SR!
-            const endpoint = user.role === 'SR' ? '/transactions/sr-request-payout' : '/transactions/request-payout';
-
-            const res = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
+            // 🚀 CLEAN ROUTE: Always hits your backend's Distributor endpoint
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/request-payout`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
                 },
-                body: JSON.stringify({
-                    amount: requestAmount,
-                    targetUserId: user.id || user._id
-                })
+                body: JSON.stringify({ amount: requestAmount, targetUserId: myIdStr })
             });
+
             if (res.ok) {
-                alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from the wallet.`);
+                alert(`✅ PAYOUT REQUESTED: ৳${requestAmount} has been deducted from your wallet.`);
                 setPayoutModal({ isOpen: false, amount: 0 });
                 fetchMyNetwork();
                 fetchExtendedData();
@@ -702,13 +690,13 @@ const DistributorDashboard = ({ user, onLogout }) => {
                         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-3xl text-gray-500 hover:text-white transition-colors mb-1">≡</button>
                         <div>
                             <h1 className="text-xl font-black text-blue-500 italic tracking-tighter">TRVNX_DISTRIBUTOR_HUB</h1>
-                            <p className="text-[9px] text-gray-500 tracking-widest mt-1">Identity: {user.name} | Wallet: ৳{calculatedBalance.toLocaleString()}</p>
+                            <p className="text-[9px] text-gray-500 tracking-widest mt-1">Identity: {user.name} | Wallet: ৳{distributorBalance.toLocaleString()}</p>
                         </div>
                     </div>
                     {/* Button only shows or enables if balance is high enough */}
-                    {calculatedBalance >= 10000 && (
+                    {distributorBalance >= 10000 && (
                         <button
-                            onClick={() => setPayoutModal({isOpen: true, amount: calculatedBalance})}
+                            onClick={() => setPayoutModal({isOpen: true, amount: distributorBalance})}
                             className="bg-green-600 ... animate-pulse"
                         >
                             + REQUEST PAYOUT
@@ -996,10 +984,10 @@ const DistributorDashboard = ({ user, onLogout }) => {
                                 <div className="p-8 max-w-sm">
                                     <div className="mb-6">
                                         <p className="text-[9px] text-gray-500 font-black tracking-widest uppercase mb-1">Available Commission Balance</p>
-                                        <h2 className="text-3xl font-black text-green-400 font-mono">৳{calculatedBalance.toLocaleString()}</h2>
+                                        <h2 className="text-3xl font-black text-green-400 font-mono">৳{distributorBalance.toLocaleString()}</h2>
                                         {!canRequestPayout && <p className="text-[8px] text-red-400 mt-2 font-black tracking-widest">Payout locked. Minimum ৳10,000 or End of Month required.</p>}
                                     </div>
-                                    <button onClick={() => setPayoutModal({isOpen: true, amount: calculatedBalance})} disabled={!canRequestPayout} className={`w-full py-4 rounded text-[10px] font-black tracking-widest shadow-lg transition-all ${canRequestPayout ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/30' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
+                                    <button onClick={() => setPayoutModal({isOpen: true, amount: distributorBalance})} disabled={!canRequestPayout} className={`w-full py-4 rounded text-[10px] font-black tracking-widest shadow-lg transition-all ${canRequestPayout ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/30' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
                                         REQUEST PAYOUT TO ADMIN
                                     </button>
                                 </div>
@@ -1042,10 +1030,10 @@ const DistributorDashboard = ({ user, onLogout }) => {
                             <div className="flex justify-between items-center bg-[#0A1128] p-4 rounded border border-[#273A60] shadow-lg">
                                 <div>
                                     <p className="text-[8px] text-gray-500 font-black tracking-widest uppercase">Total Available Income</p>
-                                    <h2 className="text-2xl font-black text-green-400 font-mono">৳{calculatedBalance.toLocaleString()}</h2>
+                                    <h2 className="text-2xl font-black text-green-400 font-mono">৳{distributorBalance.toLocaleString()}</h2>
                                     {!canRequestPayout && <p className="text-[8px] text-red-400 mt-1 font-black tracking-widest">Payout locked. Min ৳10000 or End of Month.</p>}
                                 </div>
-                                <button onClick={() => setPayoutModal({isOpen: true, amount: calculatedBalance})} disabled={!canRequestPayout} className={`px-6 py-3 rounded text-[10px] font-black tracking-widest shadow-lg transition-all ${canRequestPayout ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/30 animate-pulse' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
+                                <button onClick={() => setPayoutModal({isOpen: true, amount: distributorBalance})} disabled={!canRequestPayout} className={`px-6 py-3 rounded text-[10px] font-black tracking-widest shadow-lg transition-all ${canRequestPayout ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/30 animate-pulse' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
                                     REQUEST PAYOUT
                                 </button>
                             </div>
@@ -1481,13 +1469,13 @@ const DistributorDashboard = ({ user, onLogout }) => {
                             <div className="space-y-4 mb-6">
                                 <div>
                                     <label className="text-[9px] text-gray-500 tracking-widest">Available Balance</label>
-                                    <div className="text-white font-mono text-xl font-black">৳{calculatedBalance}</div>
+                                    <div className="text-white font-mono text-xl font-black">৳{distributorBalance}</div>
                                 </div>
                                 <div>
                                     <label className="text-[9px] text-gray-500 tracking-widest">Amount to Withdraw</label>
                                     <input
                                         type="number"
-                                        max={calculatedBalance}
+                                        max={distributorBalance}
                                         required
                                         value={payoutModal.amount}
                                         onChange={e => setPayoutModal({...payoutModal, amount: Number(e.target.value)})}
