@@ -115,14 +115,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                 const myLedger = ledgerArray.filter(tx => String(tx.userId?._id || tx.userId) === myIdStr);
                 setFinanceLedger(myLedger);
 
-                // 🚀 FIXED: Find actual balance from my latest ledger entry or DB
-                const latestEntry = allUsers.find(u => String(u._id) === myIdStr);
-                if (latestEntry) setDistributorBalance(latestEntry.balance || 0);
-
                 // 2. Pending SR Requests (Notification Badge logic)
-                const mySrIds = mySRs.map(sr => String(sr._id));
-
-                // 🚀 THE FIX: This filter is what drives the badge and the "SR PAYOUT REQUESTS" table
                 const requests = ledgerArray.filter(tx =>
                     tx.type === 'SR_PAYOUT_REQUEST' &&
                     tx.status === 'PENDING'
@@ -134,7 +127,7 @@ const DistributorDashboard = ({ user, onLogout }) => {
                     ['COMMISSION', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST'].includes(tx.type)
                 );
                 setSrTransactions(srFullLedger);
-            }
+            } // 🚀 ADDED THIS MISSING CLOSING BRACE!
 
             const targetRes = await fetch(`${import.meta.env.VITE_API_URL}/marketing/targets`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` } });
             if (targetRes.ok) {

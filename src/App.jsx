@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Login from './components/Login.jsx';
 
 // Dashboards - Full Supply Chain Integration
@@ -8,22 +8,23 @@ import SRDashboard from './components/dashboards/SRDashboard.jsx';
 import ShopkeeperDashboard from './components/dashboards/ShopkeeperDashboard.jsx';
 
 function App() {
-    const [user, setUser] = useState(null);
-    const [isImpersonating, setIsImpersonating] = useState(false); // 🚀 NEW: Mirror State
-
-    // Logic: Persistent Session (Keep user logged in on refresh)
-    useEffect(() => {
-        const savedUser = localStorage.getItem('trvnx_user');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
+    // 🚀 THE FIX: Initialize state directly from localStorage (Lazy Initialization)
+    const [user, setUser] = useState(() => {
+        try {
+            const savedUser = localStorage.getItem('trvnx_user');
+            return savedUser ? JSON.parse(savedUser) : null;
+        } catch {
+            return null;
         }
+    });
 
-        // 🚀 NEW: Detect if Admin is mirroring another user
-        const originalAdminToken = localStorage.getItem('original_admin_token');
-        if (originalAdminToken) {
-            setIsImpersonating(true);
-        }
-    }, []);
+    // 🚀 THE FIX: Check for mirror token immediately on load
+    const [isImpersonating, setIsImpersonating] = useState(() => {
+        return !!localStorage.getItem('original_admin_token');
+    });
+
+    // NOTE: We deleted the useEffect() completely because initialization is now
+    // handled synchronously by the useState hooks above!
 
     const handleLoginSuccess = (userData) => {
         setUser(userData);
@@ -58,12 +59,14 @@ function App() {
 
     // Logic: The TRVNX Gatekeeper - Routes users based on Authorization Level
     const renderRoleBasedUI = () => {
+        if (!user) return null; // Safety check
+
         switch (user.role) {
             case 'SUPER_ADMIN':
             case 'ADMIN':
-            case 'ACCOUNTS':        // 🚀 FIXED: Added new Lindux Roles so Mirror doesn't crash
-            case 'MARKETING':       // 🚀 FIXED: Added new Lindux Roles
-            case 'CALL_CENTER':     // 🚀 FIXED: Added new Lindux Roles
+            case 'ACCOUNTS':
+            case 'MARKETING':
+            case 'CALL_CENTER':
                 return <AdminDashboard user={user} onLogout={handleLogout} />;
 
             case 'DISTRIBUTOR':

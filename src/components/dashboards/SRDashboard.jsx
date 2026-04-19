@@ -32,7 +32,7 @@ const SRDashboard = ({ user, onLogout }) => {
     const ITEMS_PER_PAGE = 50;
     const [shopPage, setShopPage] = useState(1);
     const [devicePage, setDevicePage] = useState(1);
-    const [commPage, setCommPage] = useState(1);
+
 
     const [shopForm, setShopForm] = useState({
         business_name: '', password: '', name: '', nid_number: '',
@@ -239,8 +239,6 @@ const SRDashboard = ({ user, onLogout }) => {
     const filteredDevices = filterByDate(devices);
     const paginatedDevices = filteredDevices.slice((devicePage - 1) * ITEMS_PER_PAGE, devicePage * ITEMS_PER_PAGE);
 
-    const filteredCommissions = filterByDate(commissions);
-    const paginatedCommissions = filteredCommissions.slice((commPage - 1) * ITEMS_PER_PAGE, commPage * ITEMS_PER_PAGE);
 
     const filteredMarketingTargets = marketingTargets.filter(t => {
         let match = true;
