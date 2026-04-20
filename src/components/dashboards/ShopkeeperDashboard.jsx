@@ -48,7 +48,7 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
         customer_name: '', customer_phone: '', father_name: '', mother_name: '',
         present_address: '', permanent_address: '', product_name: '', product_model: '',
         imei: '', imei2: '', total_price: '', down_payment: '',
-        installment_months: '1', emi_start_date: '',
+        installment_months: '1', emi_start_date: '', auto_lock: true, // 🚀 ADDED AUTO_LOCK HERE
         customer_photo: null, nid_card: null
     });
 
@@ -87,7 +87,7 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
                 setGatewayConfig(data);
                 setSystemConfig(data || {}); // 🚀 ADDED TO GET QR CODES
             }
-        } catch (error) { console.error("Gateway fetch failed"); }
+        } catch (error) { console.error("Gateway fetch failed", error); }
     };
 
     // 🔥 THE FIX: Robust Polling Setup
@@ -133,7 +133,7 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
             } else {
                 alert(`Error: ${data.message}`);
             }
-        } catch (err) { alert("Failed to connect to server."); }
+        } catch (err) { console.error(err); alert("Failed to connect to server."); }
     };
 
     const copyToClipboard = (text) => {
@@ -159,7 +159,7 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
             } else {
                 alert("❌ FAILED TO UPDATE PASSWORD.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     // --- EMI & FINANCIAL LOGIC ---
@@ -912,14 +912,15 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
                             <input type="number" placeholder="Down Payment (৳) *" required className="bg-[#050A15] border border-[#273A60] p-3 rounded text-white text-xs outline-none focus:border-blue-500" value={regForm.down_payment} onChange={(e) => setRegForm({...regForm, down_payment: e.target.value})} />
 
                             <div className="flex flex-col bg-[#050A15] border border-[#273A60] rounded p-1">
-                                <label className="text-[8px] text-gray-500 uppercase ml-2 pt-1 font-bold">Installment Plan (Months)</label>
-                                <select className="bg-transparent text-white text-xs p-2 outline-none" value={regForm.installment_months} onChange={(e) => setRegForm({...regForm, installment_months: e.target.value})}>
-                                    {[1, 2, 3, 4, 6, 12, 18, 24].map(m => <option key={m} value={m} className="bg-[#0A1128]">{m} Months</option>)}
+                                <label className="text-[8px] text-gray-500 uppercase ml-2 pt-1 font-bold">Auto Lock on Due Date?</label>
+                                <select
+                                    className="bg-transparent text-white text-xs p-2 outline-none"
+                                    value={regForm.auto_lock.toString()}
+                                    onChange={(e) => setRegForm({...regForm, auto_lock: e.target.value === 'true'})}
+                                >
+                                    <option value="true" className="bg-[#0A1128]">Yes - Auto Lock</option>
+                                    <option value="false" className="bg-[#0A1128]">No - Manual Lock Only</option>
                                 </select>
-                            </div>
-                            <div className="flex flex-col bg-[#050A15] border border-[#273A60] rounded p-1">
-                                <label className="text-[8px] text-gray-500 uppercase ml-2 pt-1 font-bold">EMI Start Date</label>
-                                <input type="date" className="bg-transparent text-white text-xs p-2 outline-none uppercase font-bold" value={regForm.emi_start_date} onChange={(e) => setRegForm({...regForm, emi_start_date: e.target.value})} />
                             </div>
 
                             <button type="submit" className="md:col-span-2 mt-4 bg-blue-600 py-4 font-black uppercase tracking-widest text-white rounded shadow-lg hover:bg-blue-500 transition-all">GENERATE LICENSE & REGISTER DEVICE</button>
