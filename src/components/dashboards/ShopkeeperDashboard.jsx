@@ -911,6 +911,17 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
                             <input type="number" placeholder="Total Price (৳) *" required className="bg-[#050A15] border border-[#273A60] p-3 rounded text-white text-xs outline-none focus:border-blue-500" value={regForm.total_price} onChange={(e) => setRegForm({...regForm, total_price: e.target.value})} />
                             <input type="number" placeholder="Down Payment (৳) *" required className="bg-[#050A15] border border-[#273A60] p-3 rounded text-white text-xs outline-none focus:border-blue-500" value={regForm.down_payment} onChange={(e) => setRegForm({...regForm, down_payment: e.target.value})} />
 
+                            {/* 🚀 RESTORED: EMI MONTHS AND START DATE */}
+                            <div className="flex flex-col">
+                                <label className="text-[8px] text-gray-500 uppercase mb-1 font-bold ml-1">Total EMI Months *</label>
+                                <input type="number" min="1" placeholder="e.g. 6" required className="bg-[#050A15] border border-[#273A60] p-3 rounded text-white text-xs outline-none focus:border-blue-500" value={regForm.installment_months} onChange={(e) => setRegForm({...regForm, installment_months: e.target.value})} />
+                            </div>
+
+                            <div className="flex flex-col">
+                                <label className="text-[8px] text-gray-500 uppercase mb-1 font-bold ml-1">1st EMI Date *</label>
+                                <input type="date" required className="bg-[#050A15] border border-[#273A60] p-3 rounded text-white text-xs outline-none focus:border-blue-500 uppercase" value={regForm.emi_start_date} onChange={(e) => setRegForm({...regForm, emi_start_date: e.target.value})} />
+                            </div>
+
                             <div className="flex flex-col bg-[#050A15] border border-[#273A60] rounded p-1">
                                 <label className="text-[8px] text-gray-500 uppercase ml-2 pt-1 font-bold">Auto Lock on Due Date?</label>
                                 <select
