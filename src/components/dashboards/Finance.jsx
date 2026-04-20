@@ -182,7 +182,10 @@ const Finance = ({
                 const cashbookRows = sortedCashbook.map(tx => {
                     const txType = tx?.type || '';
                     const isIncome = ['MANUAL_INCOME', 'INCOME', 'RECHARGE'].includes(txType);
-                    const isExpense = ['MANUAL_EXPENSE', 'EXPENSE', 'BONUS_EXPENSE'].includes(txType) || (txType === 'PAYOUT_REQUEST' && tx?.status === 'SUCCESS');
+
+                    // 🚀 UPDATED: Now checks for both SUCCESS and RELEASED statuses
+                    const isExpense = ['MANUAL_EXPENSE', 'EXPENSE', 'BONUS_EXPENSE'].includes(txType) ||
+                        (txType === 'PAYOUT_REQUEST' && (tx?.status === 'SUCCESS' || tx?.status === 'RELEASED'));
 
                     let incAmt = 0;
                     let expAmt = 0;
@@ -318,7 +321,8 @@ const Finance = ({
             {activeTab === 'finance_balance' && (() => {
                 // 🚀 FIXED: Balance Sheet EXCLUDES Recharge so it shows true net revenue
                 const bsIncomeEntries = filteredLedger.filter(tx => tx && (['MANUAL_INCOME', 'INCOME', 'LICENSE_ACTIVATION'].includes(tx.type)));
-                const bsExpenseEntries = filteredLedger.filter(tx => tx && (['MANUAL_EXPENSE', 'COMMISSION', 'SR_PAYOUT', 'EXPENSE', 'BONUS_EXPENSE'].includes(tx.type)));
+                // 🚀 FIXED: Removed SR_PAYOUT so we don't double-count expenses!
+                const bsExpenseEntries = filteredLedger.filter(tx => tx && (['MANUAL_EXPENSE', 'COMMISSION', 'EXPENSE', 'BONUS_EXPENSE'].includes(tx.type)));
 
                 const bsTotalIncome = bsIncomeEntries.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
                 const bsTotalExpense = bsExpenseEntries.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
@@ -361,7 +365,8 @@ const Finance = ({
                             <div className="p-4 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
                                 <h3 className="text-xs font-bold uppercase tracking-widest text-blue-300">Finance Ledger Sync</h3>
                                 <div className="flex gap-2">
-                                    <button onClick={() => generateFinancePDF("Balance Sheet", filteredLedger.filter(tx => tx.type !== 'RECHARGE' && tx.type !== 'DISTRIBUTOR_EXPENSE' && tx.type !== 'SR_COMMISSION'))} className="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded shadow-lg transition-all font-black uppercase tracking-widest">📄 DOWNLOAD PDF</button>
+                                    {/* 🚀 FIXED: Added the payout exclusions to the PDF generator */}
+                                    <button onClick={() => generateFinancePDF("Balance Sheet", filteredLedger.filter(tx => !['RECHARGE', 'DISTRIBUTOR_EXPENSE', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST', 'PAYOUT_REQUEST'].includes(tx.type)))} className="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded shadow-lg transition-all font-black uppercase tracking-widest">📄 DOWNLOAD PDF</button>
                                     <button onClick={() => fetchData('admin/finance-ledger', setFinanceLedger)} className="text-[9px] bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full border border-blue-500/30 hover:bg-blue-500/40 transition-all font-black uppercase tracking-widest">↻ SYNC</button>
                                 </div>
                             </div>
@@ -379,7 +384,8 @@ const Finance = ({
                                     </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#162447]">
-                                    {filteredLedger.filter(tx => tx.type !== 'PAYOUT_REQUEST' && tx.type !== 'RECHARGE' && tx.type !== 'DISTRIBUTOR_EXPENSE' && tx.type !== 'SR_COMMISSION').map((tx, idx) => {
+                                    {/* 🚀 FIXED: Hiding all Payouts from the Balance Sheet Table */}
+                                    {filteredLedger.filter(tx => !['PAYOUT_REQUEST', 'RECHARGE', 'DISTRIBUTOR_EXPENSE', 'SR_COMMISSION', 'SR_PAYOUT', 'SR_PAYOUT_REQUEST'].includes(tx.type)).map((tx, idx) => {
 
                                         const isIncome = ['MANUAL_INCOME', 'INCOME', 'LICENSE_ACTIVATION'].includes(tx.type);
 
