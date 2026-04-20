@@ -273,6 +273,28 @@ const AdminDashboard = ({ user, onLogout }) => {
         } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
 
+    // 🚀 NEW: Silent App Update Function
+    const handlePushUpdate = async (deviceId) => {
+        const res = await fetch(`${VITE_API_URL}/devices/update-app`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
+            },
+            body: JSON.stringify({
+                deviceId: deviceId,
+                apkUrl: "https://server.trvnx.com/downloads/trvnx-v2.apk" // Update this link when you have a new APK!
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ UPDATE DISPATCHED! It will install silently in the background.");
+        } else {
+            alert(`❌ FAILED: ${data.message}`);
+        }
+    };
+
     const handleCreateTarget = async (e) => {
         e.preventDefault();
         try {
@@ -1173,8 +1195,13 @@ const AdminDashboard = ({ user, onLogout }) => {
                                                         ) : (
                                                             <button disabled className="text-gray-600 px-3 py-1.5 rounded border border-gray-700 bg-gray-900/50 cursor-not-allowed font-black text-[8px]">NO GPS</button>
                                                         )}
+
                                                         <button onClick={() => setSecureActionModal({ isOpen: true, device: dev, actionType: 'TRACK', step: 1, reason: 'Due to Customer Request', customReason: '', password: '' })} className="bg-[#2563eb] hover:bg-blue-500 text-white px-3 py-1.5 rounded text-[8px] transition-all font-black">TRACK</button>
                                                         <button onClick={() => setViewDetailsModal({isOpen: true, device: dev})} className="bg-transparent border border-[#273A60] text-gray-300 px-3 py-1.5 rounded text-[8px] hover:bg-gray-800 transition-all font-black">VIEW</button>
+
+                                                        {/* 🚀 NEW: The Update Button */}
+                                                        <button onClick={() => { if(window.confirm("Push silent update to this device?")) handlePushUpdate(dev._id); }} className="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1.5 rounded text-[8px] transition-all font-black uppercase">UPDATE</button>
+
                                                         <button onClick={() => handleDeviceAction(dev._id, dev.is_locked ? 'UNBLOCK' : 'BLOCK')} className={`px-3 py-1.5 rounded text-[8px] font-black transition-all ${dev.is_locked ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-900/40 text-red-500 border border-red-900/50 hover:bg-red-600 hover:text-white'}`}>
                                                             {dev.is_locked ? 'UNLOCK' : 'LOCK'}
                                                         </button>
