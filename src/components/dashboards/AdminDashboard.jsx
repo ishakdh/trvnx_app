@@ -258,13 +258,17 @@ const AdminDashboard = ({ user, onLogout }) => {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
                 body: JSON.stringify(payload)
             });
+
+            // 🚀 FIXED: We must parse the JSON before checking if it failed!
+            const data = await res.json();
+
             if (res.ok) {
                 alert(`✅ ${actionType} ACTION SUCCESSFUL.`);
                 setSecureActionModal({ isOpen: false, device: null, actionType: '', step: 1, reason: 'Due to Customer Request', customReason: '', password: '' });
                 fetchData('devices/all', setAllDevices);
             } else {
-                const err = await res.json();
-                alert(`❌ FAILED: ${err.message || 'Incorrect Password'}`);
+                // 🚀 FIXED: Now it will show the REAL error from the backend
+                alert(`❌ FAILED: ${data.message || 'Device Offline or Unreachable.'}`);
             }
         } catch (err) { alert("⚠️ SYSTEM OFFLINE." + err.toString()); }
     };
