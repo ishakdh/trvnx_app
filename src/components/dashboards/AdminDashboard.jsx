@@ -283,7 +283,7 @@ const AdminDashboard = ({ user, onLogout }) => {
             },
             body: JSON.stringify({
                 deviceId: deviceId,
-                apkUrl: "https://server.trvnx.com/downloads/trvnx-v2.apk" // Update this link when you have a new APK!
+                apkUrl: "https://server.trvnx.com/downloads/trvnx-v2.apk"
             })
         });
 
