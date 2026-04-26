@@ -182,7 +182,19 @@ const ActivityLog = ({ logs, onRefresh }) => {
 </span>
                                 </td>
                                 <td className="p-4">
-                                    <div className="text-gray-300 font-mono italic">{log.target_imei ? `IMEI: ${log.target_imei}` : (log.target_id ? `ID: ${String(log.target_id).slice(-6).toUpperCase()}` : 'N/A')}</div>
+                                    {/* 1. Shows the Device / User ID in bright blue */}
+                                    {log.target_id && (
+                                        <div className="text-blue-400 font-black mb-1 uppercase tracking-widest text-[9px]">
+                                            DEV_ID: {String(log.target_id).slice(-8)}
+                                        </div>
+                                    )}
+
+                                    {/* 2. Shows the IMEI underneath it in gray */}
+                                    {log.target_imei && (
+                                        <div className="text-gray-500 font-mono italic text-[7px]">
+                                            IMEI: {log.target_imei}
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="p-4 text-gray-400 max-w-sm whitespace-normal leading-relaxed">
                                     {log.reason}
