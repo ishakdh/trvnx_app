@@ -70,7 +70,7 @@ const ActivityLog = ({ logs, onRefresh }) => {
             log.performed_by?.name || 'SYSTEM',
             log.performed_by?.role || 'CORE',
             log.action_type,
-            log.target_imei || (log.target_id ? String(log.target_id).slice(-6).toUpperCase() : 'N/A'),
+            log.target_imei || (log.target_id && log.target_id._id ? String(log.target_id._id).slice(-6).toUpperCase() : log.target_id ? String(log.target_id).slice(-6).toUpperCase() : 'N/A'),
 
             // 🚀 FIXED: Replaces the '৳' symbol with 'BDT ' so the PDF doesn't break the layout
             (log.reason || '').replace(/৳/g, 'BDT ')
@@ -163,39 +163,56 @@ const ActivityLog = ({ logs, onRefresh }) => {
                         <tbody className="divide-y divide-[#273A60]/50">
                         {filteredLogs.map((log) => (
                             <tr key={log._id} className="hover:bg-[#0A1128] transition-colors font-bold">
+
+                                {/* 1. TIMESTAMP */}
                                 <td className="p-4 text-gray-400">
                                     {new Date(log.createdAt).toLocaleDateString()}
                                     <div className="text-[7px] text-gray-600 mt-1">{new Date(log.createdAt).toLocaleTimeString()}</div>
                                 </td>
+
+                                {/* 2. USER / PERFORMER */}
                                 <td className="p-4">
                                     <div className="text-white">{log.performed_by?.name || 'SYSTEM'}</div>
-                                    <div className={`text-[7px] font-black mt-1 ${log.performed_by?.role === 'ADMIN' ? 'text-red-500' : 'text-blue-500'}`}>{log.performed_by?.role || 'CORE'}</div>
+                                    <div className="text-[7px] font-black mt-1 text-gray-500">{log.performed_by?.role || 'CORE'}</div>
                                 </td>
+
+                                {/* 3. ACTION TYPE */}
                                 <td className="p-4">
-                                        <span className={`px-2 py-0.5 rounded text-[8px] border 
-    ${log.action_type.includes('LOCK') || log.action_type.includes('REJECT') ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                            log.action_type.includes('SALE') || log.action_type.includes('APPROVE') ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                                log.action_type.includes('EMI') || log.action_type.includes('PAYOUT') ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                                    log.action_type.includes('UNINSTALL') ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                                                        'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
-    {log.action_type}
-</span>
+                                    <span className={`px-2 py-0.5 rounded text-[8px] border 
+                                        ${log.action_type.includes('LOCK') || log.action_type.includes('REJECT') ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                        log.action_type.includes('SALE') || log.action_type.includes('APPROVE') ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                            log.action_type.includes('EMI') || log.action_type.includes('PAYOUT') ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                                log.action_type.includes('UNINSTALL') ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                                    'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
+                                        {log.action_type}
+                                    </span>
                                 </td>
+
+                                {/* 4. TARGET DETAILS */}
                                 <td className="p-4">
-                                    {/* 1. Shows the Device / User ID in bright blue */}
-                                    {log.target_id && (
-                                        <div className="text-blue-400 font-black mb-1 uppercase tracking-widest text-[9px]">
-                                            DEV_ID: {String(log.target_id).slice(-8)}
+                                    {/* Shows Customer Name in Bright Green (if available) */}
+                                    {log.target_id && log.target_id.customer_name && (
+                                        <div className="text-green-400 font-black mb-1 uppercase tracking-widest text-[10px]">
+                                            👤 {log.target_id.customer_name}
                                         </div>
                                     )}
 
-                                    {/* 2. Shows the IMEI underneath it in gray */}
+                                    {/* Shows the Device ID underneath */}
+                                    {log.target_id && (
+                                        <div className="text-blue-400 font-bold mb-0.5 uppercase tracking-widest text-[8px]">
+                                            ID: {log.target_id._id ? String(log.target_id._id).slice(-8).toUpperCase() : String(log.target_id).slice(-8).toUpperCase()}
+                                        </div>
+                                    )}
+
+                                    {/* Shows the IMEI at the bottom */}
                                     {log.target_imei && (
                                         <div className="text-gray-500 font-mono italic text-[7px]">
                                             IMEI: {log.target_imei}
                                         </div>
                                     )}
                                 </td>
+
+                                {/* 5. REASON / DESCRIPTION */}
                                 <td className="p-4 text-gray-400 max-w-sm whitespace-normal leading-relaxed">
                                     {log.reason}
                                     <div className="text-gray-600 text-[6px] font-mono mt-1">Node: {log.ip_address || 'Internal'} | Device: {log.device_info || 'Dashboard'}</div>
