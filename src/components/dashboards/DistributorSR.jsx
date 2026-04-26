@@ -28,7 +28,7 @@ const DistributorSR = ({
             } else {
                 alert("❌ UPDATE FAILED.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch { alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     // 🚀 NEW: Mirror Protocol Function
@@ -58,7 +58,7 @@ const DistributorSR = ({
             } else {
                 alert("❌ MIRROR PROTOCOL FAILED. Target identity locked.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch { alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const filteredSRTx = financeLedger.filter(tx => {

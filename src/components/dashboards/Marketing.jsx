@@ -10,8 +10,8 @@ const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + i); // Current y
 
 const Marketing = ({
                        activeTab, targetForm, setTargetForm, handleCreateTarget,
-                       fetchData, setMarketingTargets, marketingTargets, paginatedMarketingTargets: initialPaginatedTargets, editTargetModal,
-                       setEditTargetModal, handleUpdateTarget, filteredMarketingTargets,
+                       paginatedMarketingTargets: initialPaginatedTargets, editTargetModal,
+                       setEditTargetModal, handleUpdateTarget,
                        targetSearchTerm, setTargetSearchTerm, allDevices = [],
                        users = []
                    }) => {
@@ -30,8 +30,7 @@ const Marketing = ({
 
     // 🚀 NEW: Auto-Generate Target Name & Date Range whenever Month, Year, or Distributor changes
     useEffect(() => {
-        // Calculate the exact first and last day of the selected month/year
-        const start = new Date(targetYear, targetMonth, 1);
+        // Calculate the exact last day of the selected month/year
         const end = new Date(targetYear, targetMonth + 1, 0);
 
         // Format to YYYY-MM-DD

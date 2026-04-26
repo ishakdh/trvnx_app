@@ -6,7 +6,22 @@ const MONTHS = [
     "July", "August", "September", "October", "November", "December"
 ];
 
-const HomeDashboard = ({ user, allDevices = [], financeLedger = [], marketingTargets = [] }) => {
+// 🚀 FIX: Moved FilterButton OUTSIDE the main component
+const FilterButton = ({ label, active, onClick }) => (
+    <button
+        onClick={onClick}
+        className={`px-3 py-1.5 rounded text-[9px] font-black tracking-widest uppercase transition-all ${
+            active
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30 border border-blue-500'
+                : 'bg-[#050A15] border border-[#273A60] text-gray-500 hover:text-gray-300 hover:bg-[#162447]'
+        }`}
+    >
+        {label}
+    </button>
+);
+
+// 🚀 FIX: Removed 'user' from props since it was unused
+const HomeDashboard = ({ allDevices = [], financeLedger = [], marketingTargets = [] }) => {
     // --- FILTER STATES ---
     const [financeFilter, setFinanceFilter] = useState('month');
 
@@ -99,20 +114,6 @@ const HomeDashboard = ({ user, allDevices = [], financeLedger = [], marketingTar
     const lockedDevices = allDevices.filter(d => d.is_locked).length;
     const unlockedDevices = allDevices.filter(d => !d.is_locked).length;
     const uninstalledDevices = allDevices.filter(d => d.license_status === 'UNINSTALLED').length;
-
-    // --- REUSABLE BUTTON ---
-    const FilterButton = ({ label, active, onClick }) => (
-        <button
-            onClick={onClick}
-            className={`px-3 py-1.5 rounded text-[9px] font-black tracking-widest uppercase transition-all ${
-                active
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-900/30 border border-blue-500'
-                    : 'bg-[#050A15] border border-[#273A60] text-gray-500 hover:text-gray-300 hover:bg-[#162447]'
-            }`}
-        >
-            {label}
-        </button>
-    );
 
     return (
         <div className="w-full max-w-7xl mx-auto flex flex-col gap-4 uppercase font-mono pb-4">

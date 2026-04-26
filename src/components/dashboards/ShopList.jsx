@@ -31,7 +31,7 @@ const ShopList = ({
                     alert(`❌ ACTION FAILED: ${errorData.message || res.statusText}`);
                 }
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch { alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     const handleUpdateShop = async (e) => {
@@ -50,7 +50,7 @@ const ShopList = ({
             } else {
                 alert("❌ UPDATE FAILED.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch { alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     // 🚀 NEW: Mirror Protocol Function
@@ -80,7 +80,7 @@ const ShopList = ({
             } else {
                 alert("❌ MIRROR PROTOCOL FAILED. Target identity locked.");
             }
-        } catch (err) { alert("⚠️ SYSTEM OFFLINE."); }
+        } catch { alert("⚠️ SYSTEM OFFLINE."); }
     };
 
     return (
