@@ -30,6 +30,8 @@ const Login = ({ onLoginSuccess }) => {
                 setError(data.message || 'IDENTITY REJECTED');
             }
         } catch (err) {
+            // 🚀 FIXED: Added console.error to use the 'err' variable and clear the ESLint warning!
+            console.error("Login Connection Error:", err);
             setError('CORE OFFLINE: CHECK BACKEND SERVER');
         } finally {
             setLoading(false);
@@ -40,8 +42,9 @@ const Login = ({ onLoginSuccess }) => {
         <div className="min-h-screen flex items-center justify-center bg-[#0A1128] font-mono p-4">
             <div className="bg-[#162447] p-8 rounded-lg border border-[#273A60] w-full max-w-md shadow-2xl">
                 <div className="text-center mb-8">
+                    {/* 🚀 FIXED: Changed Name to LINDUX OS */}
                     <h1 className="text-3xl font-bold text-white tracking-tighter">
-                        TRVNX <span className="text-blue-500">OS</span>
+                        LINDUX <span className="text-blue-500">OS</span>
                     </h1>
                     <p className="text-[#94A3B8] text-[10px] mt-2 uppercase tracking-widest">
                         Secure Gateway v1.0 // Auth_Module
