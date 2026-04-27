@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 
+const VITE_API_URL = "https://server.trvnx.com/api";
+
 const PaymentReceiveTable = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch the data from your new admin route
         const fetchTransactions = async () => {
             try {
-                const response = await fetch('/api/payment/transactions');
+                const response = await fetch(`${VITE_API_URL}/payment/transactions`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
+                    }
+                });
                 const result = await response.json();
                 if (result.success) {
                     setTransactions(result.data);
@@ -23,101 +28,79 @@ const PaymentReceiveTable = () => {
         fetchTransactions();
     }, []);
 
-    const getStatusStyle = (status) => {
-        switch (status) {
-            case 'WAITING':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'SUCCESS':
-                return 'bg-green-100 text-green-800';
-            case 'REJECTED':
-                return 'bg-red-100 text-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto mt-4">
+            <div className="bg-[#111A35] border border-[#273A60] rounded-xl shadow-2xl overflow-hidden uppercase font-bold">
 
                 {/* Header Section */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">Payment Receive</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Automated SMS webhook logs for bKash and Nagad.
-                    </p>
+                <div className="p-6 bg-[#162447] border-b border-[#273A60] flex justify-between items-center">
+                    <div>
+                        <h2 className="text-xl font-black tracking-widest text-green-400">PAYMENT RECEIVE WEBHOOK</h2>
+                        <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-1">
+                            AUTOMATED SMS LOGS FOR BKASH & NAGAD
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="text-[9px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full border border-green-500/30 hover:bg-green-500/40 transition-all font-black"
+                    >
+                        ↻ SYNC_DATA
+                    </button>
                 </div>
 
                 {/* Table Container */}
-                <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[9px] whitespace-nowrap">
+                        <thead className="bg-[#050A15] text-gray-500 tracking-widest">
+                        <tr>
+                            <th className="p-5">SENDER NUMBER</th>
+                            <th className="p-5">TRANSACTION ID</th>
+                            <th className="p-5">GATEWAY</th>
+                            <th className="p-5 text-right">AMOUNT</th>
+                            <th className="p-5 text-center">STATUS</th>
+                            <th className="p-5 text-right">RECEIVED AT</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#273A60]">
+                        {loading ? (
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Sender Number
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Transaction ID
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Payment Amount
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Gateway
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Received At
-                                </th>
+                                <td colSpan="6" className="p-8 text-center text-green-500 animate-pulse font-black tracking-widest">
+                                    SYNCING WITH PAYMENT GATEWAY...
+                                </td>
                             </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                                        Loading transactions...
+                        ) : transactions.length === 0 ? (
+                            <tr>
+                                <td colSpan="6" className="p-8 text-center text-gray-600 italic tracking-widest">
+                                    NO SMS PAYMENTS DETECTED IN LOGS.
+                                </td>
+                            </tr>
+                        ) : (
+                            transactions.map((tx) => (
+                                <tr key={tx._id} className="hover:bg-[#0A1128] transition-colors">
+                                    <td className="p-5 text-white font-mono">{tx.senderNumber}</td>
+                                    <td className="p-5 text-blue-400 font-mono tracking-widest">{tx.trxId}</td>
+                                    <td className="p-5">
+                       <span className={`px-2 py-1 rounded text-[8px] border ${tx.gateway.toUpperCase() === 'BKASH' ? 'bg-pink-900/30 text-pink-400 border-pink-500/30' : 'bg-orange-900/30 text-orange-400 border-orange-500/30'}`}>
+                         {tx.gateway.toUpperCase()}
+                       </span>
+                                    </td>
+                                    <td className="p-5 text-right font-black text-green-400 text-sm">
+                                        ৳{tx.amount}
+                                    </td>
+                                    <td className="p-5 text-center">
+                                        {tx.status === 'WAITING' && <span className="bg-yellow-900/40 text-yellow-500 border border-yellow-900/50 px-3 py-1.5 rounded text-[8px] font-black animate-pulse">WAITING FOR REQ</span>}
+                                        {tx.status === 'SUCCESS' && <span className="bg-green-900/40 text-green-500 border border-green-900/50 px-3 py-1.5 rounded text-[8px] font-black">SUCCESS</span>}
+                                        {tx.status === 'REJECTED' && <span className="bg-red-900/40 text-red-500 border border-red-900/50 px-3 py-1.5 rounded text-[8px] font-black">REJECTED</span>}
+                                    </td>
+                                    <td className="p-5 text-right text-gray-400 font-mono text-[8px]">
+                                        {new Date(tx.createdAt).toLocaleString()}
                                     </td>
                                 </tr>
-                            ) : transactions.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                                        No SMS payments received yet.
-                                    </td>
-                                </tr>
-                            ) : (
-                                transactions.map((tx) => (
-                                    <tr key={tx._id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {tx.senderNumber}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                                            {tx.trxId}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                                            Tk {tx.amount}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyle(tx.status)}`}>
-                          {tx.status === 'WAITING' ? 'Waiting for Request' : tx.status}
-                        </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {tx.gateway}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {new Date(tx.createdAt).toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))
+                        )}
+                        </tbody>
+                    </table>
                 </div>
-
             </div>
         </div>
     );
