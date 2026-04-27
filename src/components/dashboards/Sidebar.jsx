@@ -9,6 +9,7 @@ const Sidebar = ({
                      isDistMenuOpen, setIsDistMenuOpen,
                      isMarketingMenuOpen, setIsMarketingMenuOpen,
                      isLicenseMenuOpen, setIsLicenseMenuOpen,
+                     isPaymentMenuOpen, setIsPaymentMenuOpen,
                      onPasswordClick,
                      isLinduxUserMenuOpen, setIsLinduxUserMenuOpen, // 🚀 NEW: State for Lindux User Menu
                      onQrSetupClick // 🚀 ADDED: Prop to trigger the QR Modal in AdminDashboard
@@ -199,10 +200,34 @@ const Sidebar = ({
                 )}
 
                 {hasPerm('PAYMENT_GATEWAY') && (
-                    <button onClick={() => setActiveTab('gateways')} className={navClass('gateways')}>
-                        <span className="text-sm">💳</span>
-                        {isSidebarOpen && <span>PAYMENT_GATEWAY</span>}
-                    </button>
+                    <div className="flex flex-col">
+                        <button
+                            onClick={() => setIsPaymentMenuOpen(!isPaymentMenuOpen)}
+                            className={`px-4 py-3 rounded text-left text-[10px] font-bold tracking-widest transition-all flex justify-between items-center ${activeTab === 'gateways' || activeTab === 'payment_receive' ? 'text-green-400' : 'text-gray-500 hover:bg-gray-800'}`}
+                        >
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm">💳</span>
+                                {isSidebarOpen && <span>PAYMENT GATEWAY</span>}
+                            </div>
+                            {isSidebarOpen && <span>{isPaymentMenuOpen ? '▼' : '▶'}</span>}
+                        </button>
+                        {isPaymentMenuOpen && isSidebarOpen && (
+                            <div className="ml-4 pl-4 border-l border-green-900/40 flex flex-col gap-1 mt-1">
+                                <button
+                                    onClick={() => setActiveTab('gateways')}
+                                    className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'gateways' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}
+                                >
+                                    ADD GATEWAY
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('payment_receive')}
+                                    className={`px-4 py-2 rounded text-left text-[9px] font-bold tracking-widest ${activeTab === 'payment_receive' ? 'text-green-300 bg-green-500/10' : 'text-gray-600 hover:text-green-400 transition-colors'}`}
+                                >
+                                    PAYMENT RECEIVE
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {hasPerm('QR_CODE') && (

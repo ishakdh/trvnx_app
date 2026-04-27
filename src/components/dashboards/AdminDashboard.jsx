@@ -15,6 +15,7 @@ import Finance from './Finance.jsx';
 import DistributorSR from './DistributorSR.jsx';
 import ActivityLog from './ActivityLog.jsx';
 import Marketing from './Marketing.jsx';
+import PaymentReceiveTable from './PaymentReceiveTable.jsx';
 
 // 🚀 Fixed: Use a constant for the API URL to avoid 'import.meta' errors in certain environments
 const VITE_API_URL = "https://server.trvnx.com/api";
@@ -100,6 +101,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     const [isLicenseMenuOpen, setIsLicenseMenuOpen] = useState(false);
     const [isFinanceMenuOpen, setIsFinanceMenuOpen] = useState(false);
     const [isMarketingMenuOpen, setIsMarketingMenuOpen] = useState(false);
+    const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
     const [shopApproveModal, setShopApproveModal] = useState({ isOpen: false, shop: null });
 
     const [marketingTargets, setMarketingTargets] = useState([]);
@@ -824,6 +826,8 @@ const AdminDashboard = ({ user, onLogout }) => {
                 isDistMenuOpen={isDistMenuOpen} setIsDistMenuOpen={setIsDistMenuOpen}
                 isMarketingMenuOpen={isMarketingMenuOpen} setIsMarketingMenuOpen={setIsMarketingMenuOpen}
                 isLicenseMenuOpen={isLicenseMenuOpen} setIsLicenseMenuOpen={setIsLicenseMenuOpen}
+                isPaymentMenuOpen={isPaymentMenuOpen}
+                setIsPaymentMenuOpen={setIsPaymentMenuOpen}
                 onPasswordClick={() => setShowPasswordModal(true)}
                 isLinduxUserMenuOpen={isLinduxUserMenuOpen} setIsLinduxUserMenuOpen={setIsLinduxUserMenuOpen}
                 onQrSetupClick={() => setShowQrModal(true)}
@@ -1122,6 +1126,10 @@ const AdminDashboard = ({ user, onLogout }) => {
                                 </div>
                             </form>
                         </div>
+                    )}
+                    {/* 🚀 4. ADD THIS BLOCK RIGHT HERE: */}
+                    {activeTab === 'payment_receive' && (
+                        <PaymentReceiveTable />
                     )}
 
                     {activeTab === 'all_devices' && (
