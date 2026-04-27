@@ -5,7 +5,7 @@ import autoTable from 'jspdf-autotable';
 const ShopkeeperDashboard = ({ user, onLogout }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [devices, setDevices] = useState([]);
-    const [liveBalance, setLiveBalance] = useState(user?.balance || 0);
+    const [liveBalance, setLiveBalance] = useState(user?.current_balance || 0);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('HOME');
 
@@ -41,7 +41,6 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
     const [gatewayConfig, setGatewayConfig] = useState(null);
     const [selectedGateway, setSelectedGateway] = useState(null);
     const [txIdInput, setTxIdInput] = useState('');
-    const [txAmountInput, setTxAmountInput] = useState('');
 
     // --- FULL REGISTRATION FORM STATE ---
     const [regForm, setRegForm] = useState({
@@ -69,7 +68,7 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
             if (res.ok) {
                 const data = await res.json();
                 setDevices(data.devices || []);
-                setLiveBalance(data.live_balance || 0);
+                setLiveBalance(data.current_balance || 0);
             }
         } catch (error) {
             console.error("Database sync failed:", error);
@@ -88,6 +87,38 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
                 setSystemConfig(data || {}); // 🚀 ADDED TO GET QR CODES
             }
         } catch (error) { console.error("Gateway fetch failed", error); }
+    };
+    // 🚀 THE FIX: Adding the missing engine for the Instant Claim button
+    const handleAutoRecharge = async (e) => {
+        e.preventDefault();
+        if(!txIdInput) return alert("Please enter a Transaction ID");
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/payment/verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}`
+                },
+                body: JSON.stringify({ userId: user.id || user._id, trxId: txIdInput })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setNoticeModal({
+                    isOpen: true,
+                    title: "RECHARGE SUCCESSFUL",
+                    message: `✅ ৳${data.amountAdded} has been added to your balance automatically.`
+                });
+                setTxIdInput('');
+                fetchDevices(); // This refreshes their balance on the screen
+            } else {
+                alert(`❌ FAILED: ${data.message || 'Invalid Transaction ID'}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("⚠️ Connection error. Check your internet.");
+        }
     };
 
     // 🔥 THE FIX: Robust Polling Setup
@@ -110,36 +141,6 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
     }, []); // Empty dependency array ensures this only runs once on mount
 
 
-    // 🚀 NEW: Submitting Transaction ID to backend
-    const submitTransactionId = async (e) => {
-        e.preventDefault();
-        if(!txIdInput || !txAmountInput || !selectedGateway) return alert("Fill all fields");
-
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/transactions/submit-mfs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('trvnx_token')}` },
-                body: JSON.stringify({
-                    transactionId: txIdInput,
-                    amount: txAmountInput,
-                    gateway: selectedGateway,
-                    shopkeeperId: user.id || user._id
-                })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setNoticeModal({ isOpen: true, title: "PAYMENT IN REVIEW", message: "Transaction ID submitted successfully. Waiting for SMS Sync confirmation." });
-                setTxIdInput(''); setTxAmountInput(''); setSelectedGateway(null);
-            } else {
-                alert(`Error: ${data.message}`);
-            }
-        } catch (err) { console.error(err); alert("Failed to connect to server."); }
-    };
-
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        alert(`Copied: ${text}`);
-    };
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
@@ -161,6 +162,7 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
             }
         } catch (err) { console.error(err); alert("⚠️ SYSTEM OFFLINE."); }
     };
+
 
     // --- EMI & FINANCIAL LOGIC ---
     const getTrueEmi = (device) => {
@@ -529,26 +531,41 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
                                         <button onClick={() => setSelectedGateway(null)} className="text-[9px] text-gray-400 hover:text-white border border-gray-600 px-3 py-1 rounded">◀ BACK</button>
                                     </div>
 
-                                    <div className="flex items-center gap-4 mb-8 bg-[#0A1128] p-4 rounded border border-gray-800">
-                                        <div className="flex-1">
-                                            <p className="text-[8px] text-gray-500 uppercase tracking-widest mb-1">Target Account Number</p>
-                                            <p className="text-2xl font-mono text-white font-black tracking-widest">{selectedGateway.number}</p>
-                                        </div>
-                                        <button onClick={() => copyToClipboard(selectedGateway.number)} className={`px-4 py-2 rounded text-[10px] font-black uppercase tracking-widest ${selectedGateway.color === 'pink' ? 'bg-pink-600 hover:bg-pink-500' : 'bg-orange-600 hover:bg-orange-500'} text-white shadow-lg`}>Copy</button>
+                                    {/* Payment Instructions */}
+                                    <div className="mb-6 bg-blue-900/10 p-4 rounded border border-blue-500/20">
+                                        <p className="text-[10px] text-blue-400 font-bold mb-2">INSTRUCTIONS:</p>
+                                        <p className="text-[11px] text-gray-300 leading-relaxed">
+                                            1. Copy the number: <span className="text-white font-mono font-bold">{selectedGateway.number}</span><br/>
+                                            2. Send your desired amount via your mobile app.<br/>
+                                            3. Copy the **Transaction ID** from the confirmation SMS.<br/>
+                                            4. Paste it below and click **INSTANT CLAIM**.
+                                        </p>
                                     </div>
 
-                                    <form onSubmit={submitTransactionId} className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-[9px] text-gray-400 uppercase tracking-widest mb-1 block">Input Amount Sent (৳)</label>
-                                                <input required type="number" placeholder="e.g. 500" value={txAmountInput} onChange={(e) => setTxAmountInput(e.target.value)} className="w-full bg-[#0A1128] border border-[#273A60] p-4 rounded text-white font-mono outline-none focus:border-white" />
-                                            </div>
-                                            <div>
-                                                <label className="text-[9px] text-gray-400 uppercase tracking-widest mb-1 block">Enter Transaction ID</label>
-                                                <input required type="text" placeholder="e.g. 9J5BQX7T" value={txIdInput} onChange={(e) => setTxIdInput(e.target.value)} className="w-full bg-[#0A1128] border border-[#273A60] p-4 rounded text-white font-mono outline-none focus:border-white uppercase" />
+                                    {/* THE AUTOMATED CLAIM BOX */}
+                                    <form onSubmit={handleAutoRecharge} className="space-y-4">
+                                        <div>
+                                            <label className="text-[9px] text-gray-400 uppercase tracking-widest mb-1 block">Enter Transaction ID (from SMS)</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    placeholder="e.g. 9J5BQX7T"
+                                                    value={txIdInput}
+                                                    onChange={(e) => setTxIdInput(e.target.value)}
+                                                    className="flex-1 bg-[#0A1128] border border-[#273A60] p-4 rounded text-white font-mono outline-none focus:border-green-500 uppercase text-lg"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    className="bg-green-600 hover:bg-green-500 px-8 rounded font-black text-xs tracking-widest shadow-lg shadow-green-900/40 transition-all"
+                                                >
+                                                    INSTANT CLAIM
+                                                </button>
                                             </div>
                                         </div>
-                                        <button type="submit" className="w-full bg-green-600 hover:bg-green-500 py-4 rounded text-[11px] font-black uppercase tracking-[0.3em] shadow-lg shadow-green-900/40 mt-4">Verify Payment & Recharge</button>
+                                        <p className="text-[8px] text-center text-gray-600 tracking-widest uppercase">
+                                            ⚡ Powered by Automated SMS Webhook Matrix
+                                        </p>
                                     </form>
                                 </div>
                             )}
@@ -676,7 +693,7 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
                                             </td>
                                             <td className="p-4 text-center">
                                                 {dev.diagnostics?.last_location?.lat ? (
-                                                    <a href={`https://www.google.com/maps?q=${dev.diagnostics.last_location.lat},${dev.diagnostics.last_location.lng}`} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-400 transition-colors">VIEW MAP</a>
+                                                    <a href={`https://www.google.com/maps?q=${dev.diagnostics?.last_location?.lat},${dev.diagnostics?.last_location?.lng}`} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-400 transition-colors">VIEW MAP</a>
                                                 ) : <span className="text-gray-600">NO SIGNAL</span>}
                                             </td>
 
