@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { io } from "socket.io-client";
 
 const ShopkeeperDashboard = ({ user, onLogout }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -8,6 +9,9 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
     const [liveBalance, setLiveBalance] = useState(user?.current_balance || 0);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('HOME');
+
+    // Initialize socket (Place this outside the component)
+    const socket = io(`${import.meta.env.VITE_BASE_URL}`);
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
@@ -127,18 +131,31 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
         fetchDevices();
         fetchGateways();
 
-        // Clear any existing interval just in case
+        // 🚀 THE REAL-TIME UPDATE ENGINE
+        socket.on("DEVICE_STATUS_UPDATED", (data) => {
+            console.log("📡 Device Signal Received:", data.deviceId);
+
+            setDevices((prevDevices) =>
+                prevDevices.map((d) =>
+                    // Note: In this file, you use d._id to match the database
+                    d._id === data.deviceId
+                        ? { ...d, is_locked: data.is_locked }
+                        : d
+                )
+            );
+        });
+
         if (intervalRef.current) clearInterval(intervalRef.current);
 
-        // Set up the new interval (every 10 seconds is safer than 5)
-        intervalRef.current = setInterval(fetchDevices, 10000);
+        // Set backup polling to 30 seconds (Socket handles the fast updates)
+        intervalRef.current = setInterval(fetchDevices, 30000);
 
-        // Cleanup function runs when component unmounts
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
+            socket.off("DEVICE_STATUS_UPDATED"); // 🚀 CLEANUP
             isFetchingRef.current = false;
         };
-    }, []); // Empty dependency array ensures this only runs once on mount
+    }, []);
 
 
 
@@ -710,7 +727,16 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
                                                     ) : (
                                                         <>
                                                             {/* 🚀 UPDATE 3: Action Popup trigger */}
-                                                            <button onClick={() => setActionModal({ isOpen: true, device: dev, action: dev.is_locked ? 'UNBLOCK' : 'BLOCK', reason: 'Due to user request', customReason: '' })} className={`${dev.is_locked ? 'bg-[#16a34a] hover:bg-green-500' : 'bg-[#dc2626] hover:bg-red-500'} text-white px-3 py-1.5 rounded text-[8px] transition-all shadow-lg`}>
+                                                            <button
+                                                                onClick={() => setActionModal({
+                                                                    isOpen: true,
+                                                                    device: dev,
+                                                                    action: dev.is_locked ? 'UNBLOCK' : 'BLOCK',
+                                                                    reason: 'Due to user request',
+                                                                    customReason: ''
+                                                                })}
+                                                                className={`${dev.is_locked ? 'bg-[#16a34a] hover:bg-green-500' : 'bg-[#dc2626] hover:bg-red-500'} ...`}
+                                                            >
                                                                 {dev.is_locked ? 'UNBLOCK' : 'BLOCK'}
                                                             </button>
 

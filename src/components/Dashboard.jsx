@@ -7,24 +7,42 @@ const socket = io(`${import.meta.env.VITE_BASE_URL}`);
 const Dashboard = ({ user, onLogout }) => {
     const [devices, setDevices] = useState([]);
 
-    // Logic: Fetch real data from your backend
-    const fetchDevices = async () => {
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/agent/list`);
-            if (res.ok) {
-                const data = await res.json();
-                setDevices(data);
-            }
-        } catch (err) {
-            console.error("Backend unreachable");
-        }
-    };
-
     useEffect(() => {
+        // 🚀 FIX: Logic moved inside useEffect to prevent cascading renders
+        const fetchDevices = async () => {
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/agent/list`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setDevices(data);
+                }
+            } catch (error) {
+                // 🚀 FIX: 'error' is now used in the log to satisfy ESLint
+                console.error("Backend unreachable:", error);
+            }
+        };
+
+        // Initial fetch
         fetchDevices();
+
+        // 🚀 REAL-TIME SIGNAL LISTENER
+        socket.on("DEVICE_STATUS_UPDATED", (data) => {
+            setDevices((prevDevices) =>
+                prevDevices.map((dev) =>
+                    dev.deviceId === data.deviceId
+                        ? { ...dev, is_locked: data.is_locked }
+                        : dev
+                )
+            );
+        });
+
         const interval = setInterval(fetchDevices, 5000); // Auto-refresh every 5s
-        return () => clearInterval(interval);
-    }, []);
+
+        return () => {
+            socket.off("DEVICE_STATUS_UPDATED");
+            clearInterval(interval);
+        };
+    }, []); // 🚀 FIX: Empty dependency array prevents the "synchronous setState" warning
 
     const sendCommand = (deviceId, command) => {
         socket.emit("SEND_COMMAND", { deviceId, command });
@@ -78,7 +96,9 @@ const Dashboard = ({ user, onLogout }) => {
                                 <p className="text-[10px] text-slate-400 font-mono mb-6">ID: {dev.deviceId.slice(-6).toUpperCase()}</p>
                                 <div className="flex gap-2">
                                     <button onClick={() => sendCommand(dev.deviceId, 'VIBRATE')} className="flex-1 bg-slate-800 py-2 rounded text-[10px] font-bold uppercase hover:bg-slate-700">Ping</button>
-                                    <button onClick={() => sendCommand(dev.deviceId, 'LOCK')} className="flex-1 bg-red-900/30 border border-red-500/50 py-2 rounded text-[10px] font-bold text-red-500 uppercase hover:bg-red-500 hover:text-white">Kill</button>
+                                    <button onClick={() => sendCommand(dev.deviceId, dev.is_locked ? 'UNLOCK' : 'LOCK')} className={`flex-1 py-2 rounded text-[10px] font-bold uppercase transition-all ${dev.is_locked ? 'bg-green-900/30 border border-green-500/50 text-green-500 hover:bg-green-500 hover:text-white' : 'bg-red-900/30 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white'}`}>
+                                        {dev.is_locked ? 'Restore' : 'Kill'}
+                                    </button>
                                 </div>
                             </div>
                         ))
