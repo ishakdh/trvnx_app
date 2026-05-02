@@ -127,32 +127,43 @@ const ShopkeeperDashboard = ({ user, onLogout }) => {
 
     // 🔥 THE FIX: Robust Polling Setup
     useEffect(() => {
-        // Initial fetch
+        // Initial fetches
         fetchDevices();
         fetchGateways();
 
-        // 🚀 THE REAL-TIME UPDATE ENGINE
+        // 1. GUARANTEED LOCK/UNLOCK LISTENER
         socket.on("DEVICE_STATUS_UPDATED", (data) => {
-            console.log("📡 Device Signal Received:", data.deviceId);
-
             setDevices((prevDevices) =>
-                prevDevices.map((d) =>
-                    // Note: In this file, you use d._id to match the database
-                    d._id === data.deviceId
-                        ? { ...d, is_locked: data.is_locked }
-                        : d
+                prevDevices.map((dev) =>
+                    // 🚀 The String() wrap prevents React from failing the ID match
+                    String(dev._id) === String(data.deviceId)
+                        ? { ...dev, is_locked: data.is_locked }
+                        : dev
                 )
             );
         });
 
-        if (intervalRef.current) clearInterval(intervalRef.current);
+        // 2. GUARANTEED UNINSTALL LISTENER
+        socket.on("device_uninstalled_success", (data) => {
+            setDevices((prevDevices) =>
+                prevDevices.map((dev) =>
+                    // 🚀 The String() wrap prevents React from failing the ID match
+                    String(dev._id) === String(data.deviceId)
+                        ? { ...dev, license_status: 'UNINSTALLED' }
+                        : dev
+                )
+            );
+        });
 
-        // Set backup polling to 30 seconds (Socket handles the fast updates)
+        // Safe Polling Backup
+        if (intervalRef.current) clearInterval(intervalRef.current);
         intervalRef.current = setInterval(fetchDevices, 30000);
 
         return () => {
+            // Clean up BOTH listeners to prevent memory leaks
+            socket.off("DEVICE_STATUS_UPDATED");
+            socket.off("device_uninstalled_success");
             if (intervalRef.current) clearInterval(intervalRef.current);
-            socket.off("DEVICE_STATUS_UPDATED"); // 🚀 CLEANUP
             isFetchingRef.current = false;
         };
     }, []);
